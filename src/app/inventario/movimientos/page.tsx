@@ -50,7 +50,7 @@ export default async function MovimientosPage() {
           <p className="text-sm text-zinc-500">Aún no hay movimientos registrados.</p>
         ) : (
           <div className="overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145]">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
                   <th className="px-3 py-2 font-medium">Fecha</th>

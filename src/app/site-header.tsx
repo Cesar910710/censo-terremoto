@@ -11,12 +11,12 @@ export function SiteHeader() {
     <header
       className={
         isPublicLanding
-          ? "flex items-center justify-between border-b-2 border-blue-500 px-4 py-3 sm:px-6"
+          ? "flex items-center justify-between border-b-2 border-blue-200 px-4 py-3 sm:px-6"
           : "flex items-center justify-between border-b border-black/[.08] px-4 py-3 dark:border-white/[.145] sm:px-6"
       }
     >
       {isPublicLanding ? (
-        <span className="font-semibold tracking-tight text-blue-700 dark:text-blue-500">
+        <span className="font-semibold tracking-tight text-blue-400 dark:text-blue-300">
           Censo Damnificados
         </span>
       ) : (

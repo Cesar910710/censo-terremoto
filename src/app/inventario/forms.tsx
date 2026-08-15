@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type OutboxItem } from "@/lib/offline-db";
@@ -45,6 +45,42 @@ async function submitOrQueue(
   }
   await enqueue(kind, payload);
   return { queued: true };
+}
+
+// Modal de confirmación reutilizado por ambos formularios de creación
+// (movimiento y material nuevo). Usa <dialog> nativo — m-auto es necesario
+// porque el preflight de Tailwind resetea el margin que el navegador usa
+// para centrar el modal por defecto.
+function ConfirmDialog({
+  dialogRef,
+  title,
+  description,
+}: {
+  dialogRef: React.RefObject<HTMLDialogElement | null>;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <dialog
+      ref={dialogRef}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) dialogRef.current?.close();
+      }}
+      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-lg border-0 bg-white p-0 text-foreground shadow-lg backdrop:bg-black/40 dark:bg-zinc-900"
+    >
+      <div className="flex flex-col gap-3 p-5 text-sm">
+        <p className="text-base font-medium">{title}</p>
+        {description && <p className="text-zinc-600 dark:text-zinc-400">{description}</p>}
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.close()}
+          className="self-end rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
+        >
+          Aceptar
+        </button>
+      </div>
+    </dialog>
+  );
 }
 
 type FamilyMatch = {
@@ -153,8 +189,9 @@ export function MovementForm({ materials }: { materials: Material[] }) {
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<"ENTRADA" | "SALIDA">("ENTRADA");
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
+  const [lastQueued, setLastQueued] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   // Semilla la caché local con lo que llegó del servidor, así el <select>
   // sigue funcionando aunque se pierda la conexión después.
@@ -186,7 +223,6 @@ export function MovementForm({ materials }: { materials: Material[] }) {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
     const form = e.currentTarget;
     const data = new FormData(form);
 
@@ -209,12 +245,9 @@ export function MovementForm({ materials }: { materials: Material[] }) {
       }
       form.reset();
       setResetKey((k) => k + 1);
-      if (result.queued) {
-        setInfo("Guardado localmente. Se sincronizará cuando haya conexión.");
-        setTimeout(() => setInfo(null), 6000);
-      } else {
-        router.refresh();
-      }
+      setLastQueued(result.queued);
+      if (!result.queued) router.refresh();
+      dialogRef.current?.showModal();
     });
   }
 
@@ -227,6 +260,7 @@ export function MovementForm({ materials }: { materials: Material[] }) {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <div className="flex gap-4 text-sm">
         <label className="flex items-center gap-1.5">
@@ -289,7 +323,6 @@ export function MovementForm({ materials }: { materials: Material[] }) {
       />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {info && <p className="text-sm text-amber-600">{info}</p>}
 
       <button
         type="submit"
@@ -299,6 +332,13 @@ export function MovementForm({ materials }: { materials: Material[] }) {
         {isPending ? "Guardando..." : "Registrar movimiento"}
       </button>
     </form>
+
+    <ConfirmDialog
+      dialogRef={dialogRef}
+      title={lastQueued ? "Guardado localmente" : "Movimiento registrado correctamente"}
+      description={lastQueued ? "Se sincronizará automáticamente cuando haya conexión." : undefined}
+    />
+    </>
   );
 }
 
@@ -307,12 +347,12 @@ export function NewMaterialForm() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [lastQueued, setLastQueued] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
     const form = e.currentTarget;
     const data = new FormData(form);
 
@@ -330,18 +370,18 @@ export function NewMaterialForm() {
         return;
       }
       form.reset();
-      if (result.queued) {
-        setInfo("Guardado localmente. Se sincronizará cuando haya conexión.");
-        setTimeout(() => setInfo(null), 6000);
-      } else {
+      setLastQueued(result.queued);
+      if (!result.queued) {
         setOpen(false);
         router.refresh();
       }
+      dialogRef.current?.showModal();
     });
   }
 
-  if (!open) {
-    return (
+  return (
+    <>
+    {!open ? (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -349,48 +389,52 @@ export function NewMaterialForm() {
       >
         + Nuevo material
       </button>
-    );
-  }
+    ) : (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <input type="text" name="name" placeholder="Nombre" required className={inputClass} />
+        <input
+          type="text"
+          name="unit"
+          placeholder="Unidad (bulto, saco, m2...)"
+          required
+          className={inputClass}
+        />
+        <select name="category" className={inputClass} defaultValue="">
+          <option value="">Categoría (opcional)</option>
+          {CATEGORIAS.map((cat) => (
+            <option key={cat.codigo} value={cat.nombre}>
+              {cat.nombre}
+            </option>
+          ))}
+        </select>
 
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <input type="text" name="name" placeholder="Nombre" required className={inputClass} />
-      <input
-        type="text"
-        name="unit"
-        placeholder="Unidad (bulto, saco, m2...)"
-        required
-        className={inputClass}
-      />
-      <select name="category" className={inputClass} defaultValue="">
-        <option value="">Categoría (opcional)</option>
-        {CATEGORIAS.map((cat) => (
-          <option key={cat.codigo} value={cat.nombre}>
-            {cat.nombre}
-          </option>
-        ))}
-      </select>
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {info && <p className="text-sm text-amber-600">{info}</p>}
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
+          >
+            {isPending ? "Guardando..." : "Crear material"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-md px-4 py-2 text-sm font-medium"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    )}
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-        >
-          {isPending ? "Guardando..." : "Crear material"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded-md px-4 py-2 text-sm font-medium"
-        >
-          Cancelar
-        </button>
-      </div>
-    </form>
+    <ConfirmDialog
+      dialogRef={dialogRef}
+      title={lastQueued ? "Guardado localmente" : "Material creado correctamente"}
+      description={lastQueued ? "Se sincronizará automáticamente cuando haya conexión." : undefined}
+    />
+    </>
   );
 }
 

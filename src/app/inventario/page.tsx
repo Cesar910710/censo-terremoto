@@ -12,7 +12,7 @@ export default async function InventarioPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Inventario</h1>
         <Link
           href="/inventario/movimientos"
@@ -28,7 +28,7 @@ export default async function InventarioPage() {
           <p className="text-sm text-zinc-500">Aún no hay materiales registrados.</p>
         ) : (
           <div className="overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145]">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
                   <th className="px-3 py-2 font-medium">Material</th>

@@ -14,7 +14,7 @@ export default async function CensoPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Censo</h1>
         <Link
           href="/censo/registrar"
@@ -30,7 +30,7 @@ export default async function CensoPage() {
           <p className="text-sm text-zinc-500">Aún no hay familias registradas.</p>
         ) : (
           <div className="overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145]">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
                   <th className="px-3 py-2 font-medium">Nombre</th>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 type Material = {
@@ -34,8 +34,8 @@ export function FamilyForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const materialsByCategory = useMemo(() => {
     const groups = new Map<string, Material[]>();
@@ -91,37 +91,15 @@ export function FamilyForm({
         );
         return;
       }
+      form.reset();
       setSelectedIds(new Set());
-      if (selfRegistered) {
-        setSubmitted(true);
-      } else {
-        form.reset();
-        router.refresh();
-      }
+      if (!selfRegistered) router.refresh();
+      dialogRef.current?.showModal();
     });
   }
 
-  if (submitted) {
-    return (
-      <div className="flex flex-col gap-3 rounded-md border border-green-200 bg-green-50 p-4 text-sm dark:border-green-900 dark:bg-green-950">
-        <p className="font-medium text-green-900 dark:text-green-300">
-          ¡Listo! Tu solicitud fue registrada.
-        </p>
-        <p className="text-green-800 dark:text-green-400">
-          Pronto nos pondremos en contacto para coordinar la entrega.
-        </p>
-        <button
-          type="button"
-          onClick={() => setSubmitted(false)}
-          className="self-start text-sm font-medium underline"
-        >
-          Registrar otra solicitud
-        </button>
-      </div>
-    );
-  }
-
   return (
+    <>
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <input
         type="text"
@@ -131,7 +109,7 @@ export function FamilyForm({
         className={inputClass}
       />
 
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <select name="documentType" required className={inputClass} defaultValue="CC">
           {Object.entries(documentTypeLabel).map(([code, label]) => (
             <option key={code} value={code}>
@@ -158,7 +136,7 @@ export function FamilyForm({
 
       <input type="text" name="address" placeholder="Dirección" required className={inputClass} />
 
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <select
           name="municipality"
           required
@@ -181,10 +159,10 @@ export function FamilyForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-1">
           <span className="text-sm font-medium">¿Qué materiales necesitas?</span>
           <span
-            className={`text-xs ${selectedIds.size > 0 ? (selfRegistered ? "font-medium text-blue-700 dark:text-blue-500" : "font-medium text-zinc-700 dark:text-zinc-300") : "text-zinc-500"}`}
+            className={`text-xs ${selectedIds.size > 0 ? (selfRegistered ? "font-medium text-blue-400 dark:text-blue-300" : "font-medium text-zinc-700 dark:text-zinc-300") : "text-zinc-500"}`}
           >
             {selectedIds.size} de {materials.length} seleccionados
           </span>
@@ -215,7 +193,7 @@ export function FamilyForm({
                         type="checkbox"
                         name="materialsNeeded"
                         value={m.id}
-                        className={selfRegistered ? "accent-blue-600" : undefined}
+                        className={selfRegistered ? "accent-blue-400" : undefined}
                       />
                       {m.name} ({m.unit})
                     </label>
@@ -234,12 +212,43 @@ export function FamilyForm({
         disabled={isPending}
         className={
           selfRegistered
-            ? "rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            ? "rounded-md bg-blue-400 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
             : "rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
         }
       >
         {isPending ? "Guardando..." : "Registrar solicitud"}
       </button>
     </form>
+
+    <dialog
+      ref={dialogRef}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) dialogRef.current?.close();
+      }}
+      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-lg border-0 bg-white p-0 text-foreground shadow-lg backdrop:bg-black/40 dark:bg-zinc-900"
+    >
+      <div className="flex flex-col gap-3 p-5 text-sm">
+        <p className="text-base font-medium">
+          {selfRegistered ? "¡Listo! Tu solicitud fue registrada." : "Familia registrada correctamente."}
+        </p>
+        {selfRegistered && (
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Pronto nos pondremos en contacto para coordinar la entrega.
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.close()}
+          className={
+            selfRegistered
+              ? "self-end rounded-md bg-blue-400 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              : "self-end rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
+          }
+        >
+          Aceptar
+        </button>
+      </div>
+    </dialog>
+    </>
   );
 }
