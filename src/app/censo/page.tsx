@@ -35,6 +35,7 @@ export default async function CensoPage() {
                 <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
                   <th className="px-3 py-2 font-medium">Nombre</th>
                   <th className="px-3 py-2 font-medium">Documento</th>
+                  <th className="px-3 py-2 font-medium">Contacto</th>
                   <th className="px-3 py-2 font-medium">Municipio</th>
                   <th className="px-3 py-2 font-medium">Materiales</th>
                   <th className="px-3 py-2 font-medium">Origen</th>
@@ -48,6 +49,7 @@ export default async function CensoPage() {
                     <td className="px-3 py-2 whitespace-nowrap">
                       {f.documentType} {f.documentNumber}
                     </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{f.phone ?? "—"}</td>
                     <td className="px-3 py-2">
                       {f.municipality}, {f.department}
                     </td>

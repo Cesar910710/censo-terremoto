@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SiteHeader } from "./site-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,19 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="flex items-center justify-between border-b border-black/[.08] px-4 py-3 dark:border-white/[.145] sm:px-6">
-          <Link href="/" className="font-semibold tracking-tight">
-            Censo Terremoto
-          </Link>
-          <nav className="flex gap-4 text-sm font-medium">
-            <Link href="/inventario" className="hover:underline">
-              Inventario
-            </Link>
-            <Link href="/censo" className="hover:underline">
-              Censo
-            </Link>
-          </nav>
-        </header>
+        <SiteHeader />
         {children}
       </body>
     </html>

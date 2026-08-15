@@ -14,7 +14,10 @@ export default async function MovimientosPage() {
     prisma.inventoryMovement.findMany({
       orderBy: { occurredAt: "desc" },
       take: 20,
-      include: { material: { select: { name: true, unit: true } } },
+      include: {
+        material: { select: { name: true, unit: true } },
+        family: { select: { headOfHouseholdName: true } },
+      },
     }),
   ]);
 
@@ -69,7 +72,9 @@ export default async function MovimientosPage() {
                       {m.material.name} ({m.material.unit})
                     </td>
                     <td className="px-3 py-2 text-right">{m.quantity}</td>
-                    <td className="px-3 py-2">{m.donorName ?? m.recipientName ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {m.family?.headOfHouseholdName ?? m.donorName ?? m.recipientName ?? "—"}
+                    </td>
                     <td className="px-3 py-2">{m.note ?? "—"}</td>
                   </tr>
                 ))}

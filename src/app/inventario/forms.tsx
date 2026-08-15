@@ -47,12 +47,114 @@ async function submitOrQueue(
   return { queued: true };
 }
 
+type FamilyMatch = {
+  id: string;
+  headOfHouseholdName: string;
+  documentNumber: string | null;
+  municipality: string | null;
+};
+
+// Buscador con autocompletado contra familias censadas. Si la familia está
+// censada, envía familyId; si no se encuentra o no hay conexión para
+// buscarla, cae de vuelta al texto libre en recipientName (mismo criterio
+// que ya tenía el schema: "recipientName solo aplica si aún no existe censo
+// de la familia").
+function FamilySearchInput() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<FamilyMatch[]>([]);
+  const [selected, setSelected] = useState<FamilyMatch | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (selected || query.trim().length < 2) {
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      fetch(`/api/census/families?q=${encodeURIComponent(query.trim())}`, {
+        signal: controller.signal,
+      })
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data: FamilyMatch[]) => {
+          setResults(data);
+          setOpen(true);
+        })
+        .catch(() => {});
+    }, 300);
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [query, selected]);
+
+  const visibleResults = selected || query.trim().length < 2 ? [] : results;
+
+  return (
+    <div className="relative flex flex-col gap-1">
+      <input
+        type="text"
+        placeholder="Familia / persona que recibe (opcional)"
+        value={selected ? selected.headOfHouseholdName : query}
+        onChange={(e) => {
+          setSelected(null);
+          setQuery(e.target.value);
+        }}
+        onFocus={() => visibleResults.length > 0 && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        autoComplete="off"
+        className={inputClass}
+      />
+      <input type="hidden" name="recipientName" value={selected ? "" : query} />
+      <input type="hidden" name="familyId" value={selected?.id ?? ""} />
+
+      {selected && (
+        <span className="text-xs text-green-700 dark:text-green-500">
+          ✓ Familia censada{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setSelected(null);
+              setQuery("");
+            }}
+            className="underline"
+          >
+            quitar
+          </button>
+        </span>
+      )}
+
+      {open && !selected && visibleResults.length > 0 && (
+        <ul className="absolute top-full z-10 mt-1 w-full rounded-md border border-black/[.08] bg-white text-sm shadow-md dark:border-white/[.145] dark:bg-zinc-900">
+          {visibleResults.map((f) => (
+            <li key={f.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setSelected(f);
+                  setOpen(false);
+                }}
+                className="block w-full px-3 py-2 text-left hover:bg-black/[.04] dark:hover:bg-white/[.06]"
+              >
+                {f.headOfHouseholdName}
+                {f.documentNumber ? ` · ${f.documentNumber}` : ""}
+                {f.municipality ? ` · ${f.municipality}` : ""}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function MovementForm({ materials }: { materials: Material[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<"ENTRADA" | "SALIDA">("ENTRADA");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [resetKey, setResetKey] = useState(0);
 
   // Semilla la caché local con lo que llegó del servidor, así el <select>
   // sigue funcionando aunque se pierda la conexión después.
@@ -96,6 +198,7 @@ export function MovementForm({ materials }: { materials: Material[] }) {
       note: (data.get("note") as string) || undefined,
       donorName: type === "ENTRADA" ? (data.get("donorName") as string) || undefined : undefined,
       recipientName: type === "SALIDA" ? (data.get("recipientName") as string) || undefined : undefined,
+      familyId: type === "SALIDA" ? (data.get("familyId") as string) || undefined : undefined,
     };
 
     startTransition(async () => {
@@ -105,6 +208,7 @@ export function MovementForm({ materials }: { materials: Material[] }) {
         return;
       }
       form.reset();
+      setResetKey((k) => k + 1);
       if (result.queued) {
         setInfo("Guardado localmente. Se sincronizará cuando haya conexión.");
         setTimeout(() => setInfo(null), 6000);
@@ -174,12 +278,7 @@ export function MovementForm({ materials }: { materials: Material[] }) {
           className={inputClass}
         />
       ) : (
-        <input
-          type="text"
-          name="recipientName"
-          placeholder="Familia / persona que recibe (opcional)"
-          className={inputClass}
-        />
+        <FamilySearchInput key={resetKey} />
       )}
 
       <textarea

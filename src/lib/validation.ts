@@ -23,6 +23,7 @@ export const familySchema = z.object({
   headOfHouseholdName: z.string().min(1, "Nombre requerido"),
   documentType: z.enum(["CC", "TI", "CE", "PA", "RC", "PEP"]),
   documentNumber: z.string().min(1, "Número de identificación requerido"),
+  phone: z.string().min(1, "Número de contacto requerido"),
   address: z.string().min(1, "Dirección requerida"),
   municipality: z.string().min(1, "Municipio requerido"),
   department: z.string().min(1, "Departamento requerido"),

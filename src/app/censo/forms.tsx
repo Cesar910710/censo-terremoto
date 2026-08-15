@@ -35,6 +35,7 @@ export function FamilyForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const materialsByCategory = useMemo(() => {
     const groups = new Map<string, Material[]>();
@@ -46,6 +47,17 @@ export function FamilyForm({
     return [...groups.entries()];
   }, [materials]);
 
+  function handleMaterialsChange(e: React.ChangeEvent<HTMLDivElement>) {
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement) || target.name !== "materialsNeeded") return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (target.checked) next.add(target.value);
+      else next.delete(target.value);
+      return next;
+    });
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -56,6 +68,7 @@ export function FamilyForm({
       headOfHouseholdName: data.get("headOfHouseholdName") as string,
       documentType: data.get("documentType") as string,
       documentNumber: data.get("documentNumber") as string,
+      phone: data.get("phone") as string,
       address: data.get("address") as string,
       municipality: data.get("municipality") as string,
       department: data.get("department") as string,
@@ -78,6 +91,7 @@ export function FamilyForm({
         );
         return;
       }
+      setSelectedIds(new Set());
       if (selfRegistered) {
         setSubmitted(true);
       } else {
@@ -89,9 +103,11 @@ export function FamilyForm({
 
   if (submitted) {
     return (
-      <div className="flex flex-col gap-3 rounded-md border border-black/[.08] bg-zinc-50 p-4 text-sm dark:border-white/[.145] dark:bg-zinc-900">
-        <p className="font-medium">¡Listo! Tu solicitud fue registrada.</p>
-        <p className="text-zinc-600 dark:text-zinc-400">
+      <div className="flex flex-col gap-3 rounded-md border border-green-200 bg-green-50 p-4 text-sm dark:border-green-900 dark:bg-green-950">
+        <p className="font-medium text-green-900 dark:text-green-300">
+          ¡Listo! Tu solicitud fue registrada.
+        </p>
+        <p className="text-green-800 dark:text-green-400">
           Pronto nos pondremos en contacto para coordinar la entrega.
         </p>
         <button
@@ -132,6 +148,14 @@ export function FamilyForm({
         />
       </div>
 
+      <input
+        type="tel"
+        name="phone"
+        placeholder="Número de contacto"
+        required
+        className={inputClass}
+      />
+
       <input type="text" name="address" placeholder="Dirección" required className={inputClass} />
 
       <div className="flex gap-3">
@@ -156,29 +180,63 @@ export function FamilyForm({
         />
       </div>
 
-      <fieldset className="flex flex-col gap-3 rounded-md border border-black/[.08] p-3 dark:border-white/[.145]">
-        <legend className="px-1 text-sm font-medium">¿Qué materiales necesitas?</legend>
-        {materialsByCategory.map(([category, items]) => (
-          <div key={category} className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-zinc-500">{category}</span>
-            <div className="flex flex-col gap-1">
-              {items.map((m) => (
-                <label key={m.id} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="materialsNeeded" value={m.id} />
-                  {m.name} ({m.unit})
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
-      </fieldset>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">¿Qué materiales necesitas?</span>
+          <span
+            className={`text-xs ${selectedIds.size > 0 ? (selfRegistered ? "font-medium text-blue-700 dark:text-blue-500" : "font-medium text-zinc-700 dark:text-zinc-300") : "text-zinc-500"}`}
+          >
+            {selectedIds.size} de {materials.length} seleccionados
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-2" onChange={handleMaterialsChange}>
+          {materialsByCategory.map(([category, items]) => {
+            const selectedInCategory = items.filter((m) => selectedIds.has(m.id)).length;
+            return (
+              <details
+                key={category}
+                className="rounded-md border border-black/[.08] dark:border-white/[.145]"
+              >
+                <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium">
+                  {category}{" "}
+                  <span className="font-normal text-zinc-500">
+                    ({items.length}
+                    {selectedInCategory > 0
+                      ? `, ${selectedInCategory} seleccionado${selectedInCategory > 1 ? "s" : ""}`
+                      : ""}
+                    )
+                  </span>
+                </summary>
+                <div className="flex flex-col gap-1.5 border-t border-black/[.08] px-3 py-2 dark:border-white/[.145]">
+                  {items.map((m) => (
+                    <label key={m.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="materialsNeeded"
+                        value={m.id}
+                        className={selfRegistered ? "accent-blue-600" : undefined}
+                      />
+                      {m.name} ({m.unit})
+                    </label>
+                  ))}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
+        className={
+          selfRegistered
+            ? "rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            : "rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
+        }
       >
         {isPending ? "Guardando..." : "Registrar solicitud"}
       </button>
