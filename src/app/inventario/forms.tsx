@@ -500,11 +500,11 @@ export function MovementForm({ materials }: { materials: MaterialWithStock[] }) 
 
 export function NewMaterialForm() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [lastQueued, setLastQueued] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const formDialogRef = useRef<HTMLDialogElement>(null);
+  const confirmDialogRef = useRef<HTMLDialogElement>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -527,26 +527,31 @@ export function NewMaterialForm() {
       }
       form.reset();
       setLastQueued(result.queued);
-      if (!result.queued) {
-        setOpen(false);
-        router.refresh();
-      }
-      dialogRef.current?.showModal();
+      formDialogRef.current?.close();
+      if (!result.queued) router.refresh();
+      confirmDialogRef.current?.showModal();
     });
   }
 
   return (
     <>
-    {!open ? (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
-      >
-        + Nuevo material
-      </button>
-    ) : (
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <button
+      type="button"
+      onClick={() => formDialogRef.current?.showModal()}
+      className="self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+    >
+      + Nuevo material
+    </button>
+
+    <dialog
+      ref={formDialogRef}
+      onClick={(e) => {
+        if (e.target === formDialogRef.current) formDialogRef.current?.close();
+      }}
+      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-lg border-0 bg-white p-0 text-foreground shadow-lg backdrop:bg-black/40 dark:bg-zinc-900"
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-5">
+        <p className="text-base font-medium">Nuevo material</p>
         <input type="text" name="name" placeholder="Nombre" required className={inputClass} />
         <input
           type="text"
@@ -576,17 +581,17 @@ export function NewMaterialForm() {
           </button>
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => formDialogRef.current?.close()}
             className="rounded-md px-4 py-2 text-sm font-medium"
           >
             Cancelar
           </button>
         </div>
       </form>
-    )}
+    </dialog>
 
     <ConfirmDialog
-      dialogRef={dialogRef}
+      dialogRef={confirmDialogRef}
       title={lastQueued ? "Guardado localmente" : "Material creado correctamente"}
       description={lastQueued ? "Se sincronizará automáticamente cuando haya conexión." : undefined}
     />

@@ -15,14 +15,10 @@ export function SiteHeader() {
           : "flex items-center justify-between border-b border-black/[.08] px-4 py-3 dark:border-white/[.145] sm:px-6"
       }
     >
-      {isPublicLanding ? (
+      {isPublicLanding && (
         <span className="text-lg font-bold tracking-tight text-blue-500 dark:text-blue-300">
           Censo Damnificados
         </span>
-      ) : (
-        <Link href="/" className="font-semibold tracking-tight">
-          Censo Terremoto
-        </Link>
       )}
       {!isPublicLanding && (
         <nav className="flex gap-4 text-sm font-medium">
