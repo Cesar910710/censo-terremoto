@@ -1,0 +1,25 @@
+services:
+  - name: censo-terremoto
+    type: web
+    runtime: node
+    plan: starter
+    region: ohio
+    # --include=dev es necesario: Render no instala devDependencies por
+    # defecto en el build (NODE_ENV=production), pero ahí viven prisma,
+    # typescript y tailwindcss, que el build necesita.
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
+    preDeployCommand: npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: censo-terremoto-db
+          property: connectionString
+
+databases:
+  - name: censo-terremoto-db
+    plan: basic-256mb
+    region: ohio
