@@ -9,17 +9,7 @@ import { SyncStatus, PendingQueue } from "@/app/offline-ui";
 export const dynamic = "force-dynamic";
 
 export default async function MovimientosPage() {
-  const [materials, movements] = await Promise.all([
-    prisma.material.findMany({ orderBy: { name: "asc" } }),
-    prisma.inventoryMovement.findMany({
-      orderBy: { occurredAt: "desc" },
-      take: 20,
-      include: {
-        material: { select: { name: true, unit: true } },
-        family: { select: { headOfHouseholdName: true } },
-      },
-    }),
-  ]);
+  const materials = await prisma.material.findMany({ orderBy: { name: "asc" } });
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
@@ -44,45 +34,12 @@ export default async function MovimientosPage() {
 
       <PendingQueue />
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-500">Movimientos recientes</h2>
-        {movements.length === 0 ? (
-          <p className="text-sm text-zinc-500">Aún no hay movimientos registrados.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145]">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
-                  <th className="px-3 py-2 font-medium">Fecha</th>
-                  <th className="px-3 py-2 font-medium">Tipo</th>
-                  <th className="px-3 py-2 font-medium">Material</th>
-                  <th className="px-3 py-2 text-right font-medium">Cantidad</th>
-                  <th className="px-3 py-2 font-medium">Donante / destinatario</th>
-                  <th className="px-3 py-2 font-medium">Nota</th>
-                </tr>
-              </thead>
-              <tbody>
-                {movements.map((m) => (
-                  <tr key={m.id} className="border-b border-black/[.04] last:border-0 dark:border-white/[.08]">
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {m.occurredAt.toLocaleString("es-CO")}
-                    </td>
-                    <td className="px-3 py-2">{m.type === "ENTRADA" ? "Entrada" : "Salida"}</td>
-                    <td className="px-3 py-2">
-                      {m.material.name} ({m.material.unit})
-                    </td>
-                    <td className="px-3 py-2 text-right">{m.quantity}</td>
-                    <td className="px-3 py-2">
-                      {m.family?.headOfHouseholdName ?? m.donorName ?? m.recipientName ?? "—"}
-                    </td>
-                    <td className="px-3 py-2">{m.note ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <Link
+        href="/inventario/movimientos/historial"
+        className="self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+      >
+        Historial de movimientos
+      </Link>
     </main>
   );
 }

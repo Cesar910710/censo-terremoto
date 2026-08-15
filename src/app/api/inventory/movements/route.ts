@@ -16,16 +16,29 @@ export async function POST(req: NextRequest) {
   const id = parsed.data.id ?? crypto.randomUUID();
 
   try {
-    const movement = await prisma.inventoryMovement.upsert({
-      where: { id },
-      update: {},
-      create: { ...parsed.data, id },
-    });
+    const [movement] = await prisma.$transaction([
+      prisma.inventoryMovement.upsert({
+        where: { id },
+        update: {},
+        create: { ...parsed.data, id },
+      }),
+      // Una salida entregada a una familia censada implica que ya se le
+      // atendió — se actualiza en la misma transacción para que nunca quede
+      // un movimiento registrado sin reflejarse en el estado del censo.
+      ...(parsed.data.type === "SALIDA" && parsed.data.familyId
+        ? [
+            prisma.family.update({
+              where: { id: parsed.data.familyId },
+              data: { reviewStatus: "ATENDIDO" },
+            }),
+          ]
+        : []),
+    ]);
     return NextResponse.json(movement, { status: 201 });
   } catch (err) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2003"
+      (err.code === "P2003" || err.code === "P2025")
     ) {
       return NextResponse.json(
         { error: "Material o familia no encontrados" },

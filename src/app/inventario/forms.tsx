@@ -355,7 +355,7 @@ export function NewMaterialForm() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="self-start text-sm font-medium underline"
+        className="self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
       >
         + Nuevo material
       </button>

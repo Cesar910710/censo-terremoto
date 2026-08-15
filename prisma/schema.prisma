@@ -88,6 +88,7 @@ enum DamageLevel {
 enum ReviewStatus {
   PENDIENTE
   VERIFICADO
+  ATENDIDO // ya recibió una entrega de materiales
   RECHAZADO
 }
 

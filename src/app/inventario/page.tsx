@@ -27,28 +27,50 @@ export default async function InventarioPage() {
         {stock.length === 0 ? (
           <p className="text-sm text-zinc-500">Aún no hay materiales registrados.</p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145]">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead>
-                <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
-                  <th className="px-3 py-2 font-medium">Material</th>
-                  <th className="px-3 py-2 font-medium">Unidad</th>
-                  <th className="px-3 py-2 font-medium">Categoría</th>
-                  <th className="px-3 py-2 text-right font-medium">Disponible</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stock.map((s) => (
-                  <tr key={s.materialId} className="border-b border-black/[.04] last:border-0 dark:border-white/[.08]">
-                    <td className="px-3 py-2">{s.name}</td>
-                    <td className="px-3 py-2">{s.unit}</td>
-                    <td className="px-3 py-2">{s.category ?? "—"}</td>
-                    <td className="px-3 py-2 text-right font-medium">{s.disponible}</td>
+          <>
+            {/* Mobile: tarjetas apiladas — una tabla de 4 columnas no cabe
+                legible en un teléfono, así que por debajo de md se listan
+                como tarjetas y la tabla queda solo para pantallas grandes. */}
+            <div className="flex flex-col gap-2 md:hidden">
+              {stock.map((s) => (
+                <div
+                  key={s.materialId}
+                  className="flex items-center justify-between gap-3 rounded-md border border-black/[.08] p-3 dark:border-white/[.145]"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{s.name}</span>
+                    <span className="text-xs text-zinc-500">
+                      {s.unit} · {s.category ?? "—"}
+                    </span>
+                  </div>
+                  <span className="shrink-0 text-lg font-semibold">{s.disponible}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145] md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
+                    <th className="px-3 py-2 font-medium">Material</th>
+                    <th className="px-3 py-2 font-medium">Unidad</th>
+                    <th className="px-3 py-2 font-medium">Categoría</th>
+                    <th className="px-3 py-2 text-right font-medium">Disponible</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {stock.map((s) => (
+                    <tr key={s.materialId} className="border-b border-black/[.04] last:border-0 dark:border-white/[.08]">
+                      <td className="px-3 py-2">{s.name}</td>
+                      <td className="px-3 py-2">{s.unit}</td>
+                      <td className="px-3 py-2">{s.category ?? "—"}</td>
+                      <td className="px-3 py-2 text-right font-medium">{s.disponible}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
         <NewMaterialForm />
       </section>

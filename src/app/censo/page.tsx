@@ -29,40 +29,71 @@ export default async function CensoPage() {
         {families.length === 0 ? (
           <p className="text-sm text-zinc-500">Aún no hay familias registradas.</p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145]">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead>
-                <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
-                  <th className="px-3 py-2 font-medium">Nombre</th>
-                  <th className="px-3 py-2 font-medium">Documento</th>
-                  <th className="px-3 py-2 font-medium">Contacto</th>
-                  <th className="px-3 py-2 font-medium">Municipio</th>
-                  <th className="px-3 py-2 font-medium">Materiales</th>
-                  <th className="px-3 py-2 font-medium">Origen</th>
-                  <th className="px-3 py-2 font-medium">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {families.map((f) => (
-                  <tr key={f.id} className="border-b border-black/[.04] last:border-0 dark:border-white/[.08]">
-                    <td className="px-3 py-2">{f.headOfHouseholdName}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {f.documentType} {f.documentNumber}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{f.phone ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      {f.municipality}, {f.department}
-                    </td>
-                    <td className="px-3 py-2">
-                      {f.materialsNeeded.map((m) => m.name).join(", ") || "—"}
-                    </td>
-                    <td className="px-3 py-2">{f.selfRegistered ? "Autorregistro" : "Interno"}</td>
-                    <td className="px-3 py-2">{f.reviewStatus}</td>
+          <>
+            {/* Mobile: tarjetas apiladas — una tabla de 7 columnas no cabe
+                legible en un teléfono, así que por debajo de md se listan
+                como tarjetas y la tabla queda solo para pantallas grandes. */}
+            <div className="flex flex-col gap-2 md:hidden">
+              {families.map((f) => (
+                <div
+                  key={f.id}
+                  className="flex flex-col gap-1 rounded-md border border-black/[.08] p-3 text-sm dark:border-white/[.145]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{f.headOfHouseholdName}</span>
+                    <span className="shrink-0 text-xs text-zinc-500">{f.reviewStatus}</span>
+                  </div>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {f.documentType} {f.documentNumber} · {f.phone ?? "—"}
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {f.municipality}, {f.department}
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {f.materialsNeeded.map((m) => m.name).join(", ") || "—"}
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    {f.selfRegistered ? "Autorregistro" : "Interno"}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145] md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
+                    <th className="px-3 py-2 font-medium">Nombre</th>
+                    <th className="px-3 py-2 font-medium">Documento</th>
+                    <th className="px-3 py-2 font-medium">Contacto</th>
+                    <th className="px-3 py-2 font-medium">Municipio</th>
+                    <th className="px-3 py-2 font-medium">Materiales</th>
+                    <th className="px-3 py-2 font-medium">Origen</th>
+                    <th className="px-3 py-2 font-medium">Estado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {families.map((f) => (
+                    <tr key={f.id} className="border-b border-black/[.04] last:border-0 dark:border-white/[.08]">
+                      <td className="px-3 py-2">{f.headOfHouseholdName}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {f.documentType} {f.documentNumber}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{f.phone ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        {f.municipality}, {f.department}
+                      </td>
+                      <td className="px-3 py-2">
+                        {f.materialsNeeded.map((m) => m.name).join(", ") || "—"}
+                      </td>
+                      <td className="px-3 py-2">{f.selfRegistered ? "Autorregistro" : "Interno"}</td>
+                      <td className="px-3 py-2">{f.reviewStatus}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
     </main>
