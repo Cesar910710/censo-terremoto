@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type OutboxItem } from "@/lib/offline-db";
 import { enqueue, discardItem, retryItem } from "@/lib/sync";
+import { CATEGORIAS } from "@/lib/materiales.constants";
 
 type Material = {
   id: string;
@@ -262,12 +263,14 @@ export function NewMaterialForm() {
         required
         className={inputClass}
       />
-      <input
-        type="text"
-        name="category"
-        placeholder="Categoría (opcional)"
-        className={inputClass}
-      />
+      <select name="category" className={inputClass} defaultValue="">
+        <option value="">Categoría (opcional)</option>
+        {CATEGORIAS.map((cat) => (
+          <option key={cat.codigo} value={cat.nombre}>
+            {cat.nombre}
+          </option>
+        ))}
+      </select>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {info && <p className="text-sm text-amber-600">{info}</p>}
