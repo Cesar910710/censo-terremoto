@@ -116,10 +116,7 @@ export function FamilyForm({
       />
 
       <div className="flex gap-3">
-        <select name="documentType" required className={inputClass} defaultValue="">
-          <option value="" disabled>
-            Tipo de identificación
-          </option>
+        <select name="documentType" required className={inputClass} defaultValue="CC">
           {Object.entries(documentTypeLabel).map(([code, label]) => (
             <option key={code} value={code}>
               {label}
