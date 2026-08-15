@@ -27,12 +27,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { materialsNeeded, ...data } = parsed.data;
+  const { materialsNeeded, id: bodyId, ...data } = parsed.data;
+  // upsert por id (no create): permite reintentos idempotentes desde la cola
+  // offline — si el insert ya había llegado antes de perderse la respuesta,
+  // reenviar el mismo id no duplica la familia.
+  const id = bodyId ?? crypto.randomUUID();
 
-  const family = await prisma.family.create({
-    data: {
+  const family = await prisma.family.upsert({
+    where: { id },
+    update: {},
+    create: {
+      id,
       ...data,
-      materialsNeeded: { connect: materialsNeeded.map((id) => ({ id })) },
+      materialsNeeded: { connect: materialsNeeded.map((materialId) => ({ id: materialId })) },
     },
   });
 

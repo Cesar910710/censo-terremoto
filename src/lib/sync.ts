@@ -3,7 +3,38 @@ import { db, type OutboxItem, type OutboxKind } from "./offline-db";
 const endpoints: Record<OutboxKind, string> = {
   material: "/api/materials",
   movement: "/api/inventory/movements",
+  family: "/api/census/families",
 };
+
+// Intenta la red primero; si no hay conexión (o se cae a mitad de la
+// petición), encola en Dexie en vez de perder el registro. Un error real del
+// servidor (ej. validación) sí se devuelve, no se encola.
+export async function submitOrQueue(
+  kind: OutboxKind,
+  endpoint: string,
+  payload: Record<string, unknown>
+): Promise<{ queued: boolean; error?: string }> {
+  if (navigator.onLine) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return { queued: false };
+      const body = await res.json().catch(() => null);
+      const error = body?.error?.fieldErrors
+        ? Object.values(body.error.fieldErrors).flat().join(", ")
+        : body?.error || "No se pudo guardar";
+      return { queued: false, error };
+    } catch {
+      // navigator.onLine decía que sí, pero la petición falló igual
+      // (conexión intermitente) — cae al camino de encolar.
+    }
+  }
+  await enqueue(kind, payload);
+  return { queued: true };
+}
 
 export async function enqueue(kind: OutboxKind, payload: Record<string, unknown>) {
   const id = (payload.id as string | undefined) ?? crypto.randomUUID();
@@ -80,6 +111,15 @@ export async function syncOutbox() {
 
   const movementItems = await db.outbox.where("kind").equals("movement").toArray();
   for (const item of movementItems) {
+    const result = await syncItem(item);
+    if (result.ok) syncedCount++;
+  }
+
+  // Las familias no dependen de materiales/movimientos (materialsNeeded
+  // siempre referencia materiales ya existentes, nunca uno recién creado en
+  // el mismo formulario), así que no necesitan remapeo de ids.
+  const familyItems = await db.outbox.where("kind").equals("family").toArray();
+  for (const item of familyItems) {
     const result = await syncItem(item);
     if (result.ok) syncedCount++;
   }

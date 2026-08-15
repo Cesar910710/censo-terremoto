@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { FamilyForm } from "../forms";
+import { SyncStatus, PendingQueue } from "@/app/offline-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +24,15 @@ export default async function RegistrarFamiliaPage() {
         <h1 className="text-xl font-semibold tracking-tight">Registrar familia</h1>
       </div>
 
+      <SyncStatus />
+
       <FamilyForm
         materials={materials}
         municipios={municipios.map((m) => m.name)}
         selfRegistered={false}
       />
+
+      <PendingQueue />
     </main>
   );
 }

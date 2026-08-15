@@ -3,8 +3,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/offline-db";
-import { syncOutbox } from "@/lib/sync";
+import { db, type OutboxItem } from "@/lib/offline-db";
+import { syncOutbox, retryItem, discardItem } from "@/lib/sync";
 
 function subscribeOnline(callback: () => void) {
   window.addEventListener("online", callback);
@@ -78,6 +78,68 @@ export function SyncStatus() {
       >
         {syncing ? "Sincronizando..." : "Sincronizar ahora"}
       </button>
+    </div>
+  );
+}
+
+const kindLabel: Record<OutboxItem["kind"], string> = {
+  material: "Material nuevo",
+  movement: "Movimiento",
+  family: "Familia",
+};
+
+const statusLabel: Record<OutboxItem["status"], string> = {
+  pending: "Pendiente de sincronizar",
+  syncing: "Sincronizando...",
+  error: "Error al sincronizar",
+};
+
+function itemDetail(item: OutboxItem): string {
+  if (item.kind === "material") return ` — ${item.payload.name}`;
+  if (item.kind === "family") return ` — ${item.payload.headOfHouseholdName}`;
+  return "";
+}
+
+export function PendingQueue() {
+  const items = useLiveQuery(() => db.outbox.orderBy("createdAt").toArray(), [], [] as OutboxItem[]);
+
+  if (!items || items.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
+      <p className="font-medium text-amber-800 dark:text-amber-300">
+        Guardado localmente ({items.length})
+      </p>
+      <ul className="flex flex-col gap-2">
+        {items.map((item) => (
+          <li key={item.id} className="flex items-center justify-between gap-2">
+            <span>
+              {kindLabel[item.kind]}
+              {itemDetail(item)}
+              <span className="text-zinc-500"> · {statusLabel[item.status]}</span>
+              {item.error && <span className="block text-red-600">{item.error}</span>}
+            </span>
+            {item.status === "error" && (
+              <span className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => retryItem(item.id)}
+                  className="text-xs font-medium underline"
+                >
+                  Reintentar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => discardItem(item.id)}
+                  className="text-xs font-medium text-red-600 underline"
+                >
+                  Descartar
+                </button>
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

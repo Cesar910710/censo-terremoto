@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { submitOrQueue } from "@/lib/sync";
 
 type Material = {
   id: string;
@@ -35,6 +36,7 @@ export function FamilyForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lastQueued, setLastQueued] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const materialsByCategory = useMemo(() => {
@@ -65,6 +67,7 @@ export function FamilyForm({
     const data = new FormData(form);
 
     const body = {
+      id: crypto.randomUUID(),
       headOfHouseholdName: data.get("headOfHouseholdName") as string,
       documentType: data.get("documentType") as string,
       documentNumber: data.get("documentNumber") as string,
@@ -77,23 +80,15 @@ export function FamilyForm({
     };
 
     startTransition(async () => {
-      const res = await fetch("/api/census/families", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        setError(
-          payload?.error?.fieldErrors
-            ? Object.values(payload.error.fieldErrors).flat().join(", ")
-            : payload?.error || "No se pudo registrar"
-        );
+      const result = await submitOrQueue("family", "/api/census/families", body);
+      if (result.error) {
+        setError(result.error);
         return;
       }
       form.reset();
       setSelectedIds(new Set());
-      if (!selfRegistered) router.refresh();
+      setLastQueued(result.queued);
+      if (!selfRegistered && !result.queued) router.refresh();
       dialogRef.current?.showModal();
     });
   }
@@ -229,11 +224,24 @@ export function FamilyForm({
     >
       <div className="flex flex-col gap-3 p-5 text-sm">
         <p className="text-base font-medium">
-          {selfRegistered ? "¡Listo! Tu solicitud fue registrada." : "Familia registrada correctamente."}
+          {selfRegistered
+            ? lastQueued
+              ? "Guardado en este dispositivo."
+              : "¡Listo! Tu solicitud fue registrada."
+            : lastQueued
+              ? "Guardado localmente"
+              : "Familia registrada correctamente."}
         </p>
         {selfRegistered && (
           <p className="text-zinc-600 dark:text-zinc-400">
-            Pronto nos pondremos en contacto para coordinar la entrega.
+            {lastQueued
+              ? "Tu solicitud se enviará automáticamente en cuanto haya conexión a internet."
+              : "Pronto nos pondremos en contacto para coordinar la entrega."}
+          </p>
+        )}
+        {!selfRegistered && lastQueued && (
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Se sincronizará automáticamente cuando haya conexión.
           </p>
         )}
         <button

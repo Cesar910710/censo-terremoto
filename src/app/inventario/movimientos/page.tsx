@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { MovementForm, NewMaterialForm, PendingQueue } from "../forms";
-import { SyncStatus } from "../sync-status";
+import { MovementForm, NewMaterialForm } from "../forms";
+import { SyncStatus, PendingQueue } from "@/app/offline-ui";
 
 // Los movimientos recientes cambian con cada registro; sin esto Next
 // prerenderiza la página una sola vez en build y sirve datos desactualizados

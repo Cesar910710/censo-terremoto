@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { FamilyForm } from "../censo/forms";
+import { SyncStatus, PendingQueue } from "@/app/offline-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,15 @@ export default async function RegistroPublicoPage() {
         </p>
       </div>
 
+      <SyncStatus />
+
       <FamilyForm
         materials={materials}
         municipios={municipios.map((m) => m.name)}
         selfRegistered={true}
       />
+
+      <PendingQueue />
     </main>
   );
 }

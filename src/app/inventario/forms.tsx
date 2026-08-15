@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type OutboxItem } from "@/lib/offline-db";
-import { enqueue, discardItem, retryItem } from "@/lib/sync";
+import { submitOrQueue } from "@/lib/sync";
 import { CATEGORIAS } from "@/lib/materiales.constants";
 
 type Material = {
@@ -16,36 +16,6 @@ type Material = {
 
 const inputClass =
   "w-full rounded-md border border-black/[.08] bg-white px-3 py-2 text-sm dark:border-white/[.145] dark:bg-zinc-900";
-
-// Intenta la red primero; si no hay conexión (o se cae a mitad de la
-// petición), encola en Dexie en vez de perder el registro. Un error real del
-// servidor (ej. validación) sí se muestra, no se encola.
-async function submitOrQueue(
-  kind: "material" | "movement",
-  endpoint: string,
-  payload: Record<string, unknown>
-): Promise<{ queued: boolean; error?: string }> {
-  if (navigator.onLine) {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) return { queued: false };
-      const body = await res.json().catch(() => null);
-      const error = body?.error?.fieldErrors
-        ? Object.values(body.error.fieldErrors).flat().join(", ")
-        : body?.error || "No se pudo guardar";
-      return { queued: false, error };
-    } catch {
-      // navigator.onLine decía que sí, pero la petición falló igual
-      // (conexión intermitente) — cae al camino de encolar.
-    }
-  }
-  await enqueue(kind, payload);
-  return { queued: true };
-}
 
 // Modal de confirmación reutilizado por ambos formularios de creación
 // (movimiento y material nuevo). Usa <dialog> nativo — m-auto es necesario
@@ -438,57 +408,3 @@ export function NewMaterialForm() {
   );
 }
 
-const kindLabel: Record<OutboxItem["kind"], string> = {
-  material: "Material nuevo",
-  movement: "Movimiento",
-};
-
-const statusLabel: Record<OutboxItem["status"], string> = {
-  pending: "Pendiente de sincronizar",
-  syncing: "Sincronizando...",
-  error: "Error al sincronizar",
-};
-
-export function PendingQueue() {
-  const items = useLiveQuery(() => db.outbox.orderBy("createdAt").toArray(), [], [] as OutboxItem[]);
-
-  if (!items || items.length === 0) return null;
-
-  return (
-    <div className="flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
-      <p className="font-medium text-amber-800 dark:text-amber-300">
-        Guardado localmente ({items.length})
-      </p>
-      <ul className="flex flex-col gap-2">
-        {items.map((item) => (
-          <li key={item.id} className="flex items-center justify-between gap-2">
-            <span>
-              {kindLabel[item.kind]}
-              {item.kind === "material" ? ` — ${item.payload.name}` : ""}
-              <span className="text-zinc-500"> · {statusLabel[item.status]}</span>
-              {item.error && <span className="block text-red-600">{item.error}</span>}
-            </span>
-            {item.status === "error" && (
-              <span className="flex shrink-0 gap-2">
-                <button
-                  type="button"
-                  onClick={() => retryItem(item.id)}
-                  className="text-xs font-medium underline"
-                >
-                  Reintentar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => discardItem(item.id)}
-                  className="text-xs font-medium text-red-600 underline"
-                >
-                  Descartar
-                </button>
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}

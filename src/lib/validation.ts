@@ -20,6 +20,7 @@ export const movementSchema = z.object({
 });
 
 export const familySchema = z.object({
+  id: z.string().uuid().optional(),
   headOfHouseholdName: z.string().min(1, "Nombre requerido"),
   documentType: z.enum(["CC", "TI", "CE", "PA", "RC", "PEP"]),
   documentNumber: z.string().min(1, "Número de identificación requerido"),

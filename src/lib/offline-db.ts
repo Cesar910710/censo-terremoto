@@ -7,7 +7,7 @@ export interface CachedMaterial {
   category: string | null;
 }
 
-export type OutboxKind = "material" | "movement";
+export type OutboxKind = "material" | "movement" | "family";
 export type OutboxStatus = "pending" | "syncing" | "error";
 
 export interface OutboxItem {
