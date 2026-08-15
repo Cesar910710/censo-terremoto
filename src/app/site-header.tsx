@@ -16,7 +16,7 @@ export function SiteHeader() {
       }
     >
       {isPublicLanding ? (
-        <span className="font-semibold tracking-tight text-blue-400 dark:text-blue-300">
+        <span className="text-lg font-bold tracking-tight text-blue-500 dark:text-blue-300">
           Censo Damnificados
         </span>
       ) : (
