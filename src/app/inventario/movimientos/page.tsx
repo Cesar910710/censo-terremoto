@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { MovementForm, PendingQueue } from "../forms";
+import { MovementForm, NewMaterialForm, PendingQueue } from "../forms";
 import { SyncStatus } from "../sync-status";
 
 // Los movimientos recientes cambian con cada registro; sin esto Next
@@ -31,6 +31,12 @@ export default async function MovimientosPage() {
 
       <section className="flex flex-col gap-3">
         <MovementForm materials={materials} />
+        <div className="flex flex-col gap-1 border-t border-black/[.08] pt-3 dark:border-white/[.145]">
+          <span className="text-xs text-zinc-500">
+            ¿El material que buscas no está en la lista?
+          </span>
+          <NewMaterialForm />
+        </div>
       </section>
 
       <PendingQueue />
