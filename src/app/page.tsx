@@ -17,10 +17,13 @@ export default function Home() {
           <span className="font-medium">Inventario</span>
           <span className="text-sm text-zinc-500">Donaciones y entregas</span>
         </Link>
-        <div className="flex h-24 w-56 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-black/[.08] text-center text-zinc-400 dark:border-white/[.145] dark:text-zinc-600">
+        <Link
+          href="/censo"
+          className="flex h-24 w-56 flex-col items-center justify-center gap-1 rounded-lg border border-black/[.08] bg-white text-center transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:bg-zinc-900 dark:hover:bg-zinc-800"
+        >
           <span className="font-medium">Censo</span>
-          <span className="text-sm">Próximamente</span>
-        </div>
+          <span className="text-sm text-zinc-500">Familias y solicitudes</span>
+        </Link>
       </div>
     </main>
   );

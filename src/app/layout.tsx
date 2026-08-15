@@ -33,9 +33,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/inventario" className="hover:underline">
               Inventario
             </Link>
-            <span className="text-zinc-400 dark:text-zinc-600">
-              Censo (próximamente)
-            </span>
+            <Link href="/censo" className="hover:underline">
+              Censo
+            </Link>
           </nav>
         </header>
         {children}

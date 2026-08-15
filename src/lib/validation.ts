@@ -18,3 +18,14 @@ export const movementSchema = z.object({
   familyId: z.string().uuid().optional(),
   occurredAt: z.string().datetime().optional(),
 });
+
+export const familySchema = z.object({
+  headOfHouseholdName: z.string().min(1, "Nombre requerido"),
+  documentType: z.enum(["CC", "TI", "CE", "PA", "RC", "PEP"]),
+  documentNumber: z.string().min(1, "Número de identificación requerido"),
+  address: z.string().min(1, "Dirección requerida"),
+  municipality: z.string().min(1, "Municipio requerido"),
+  department: z.string().min(1, "Departamento requerido"),
+  materialsNeeded: z.array(z.string().uuid()).min(1, "Selecciona al menos un material"),
+  selfRegistered: z.boolean().optional(),
+});

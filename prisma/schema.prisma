@@ -46,7 +46,8 @@ model Material {
   category  String? // ej: techo, estructura, aseo, herramientas
   createdAt DateTime @default(now())
 
-  movements InventoryMovement[]
+  movements        InventoryMovement[]
+  neededByFamilies Family[]            @relation("FamilyMaterialsNeeded")
 
   @@unique([name, unit])
 }
@@ -55,20 +56,20 @@ model Material {
 // Esto hace que sincronizar offline sea seguro: cada registro es un insert
 // independiente, nunca un update sobre una cantidad compartida.
 model InventoryMovement {
-  id          String       @id @default(uuid())
-  material    Material     @relation(fields: [materialId], references: [id])
-  materialId  String
-  type        MovementType
-  quantity    Float
-  note        String?
-  donorName   String? // solo aplica a ENTRADA
-  recipientName String? // solo aplica a SALIDA, si aún no existe censo de la familia
-  family      Family?      @relation(fields: [familyId], references: [id])
-  familyId    String? // solo aplica a SALIDA (a quién se le entregó, si ya está censada)
-  createdBy   User?        @relation(fields: [createdByUserId], references: [id])
+  id              String       @id @default(uuid())
+  material        Material     @relation(fields: [materialId], references: [id])
+  materialId      String
+  type            MovementType
+  quantity        Float
+  note            String?
+  donorName       String? // solo aplica a ENTRADA
+  recipientName   String? // solo aplica a SALIDA, si aún no existe censo de la familia
+  family          Family?      @relation(fields: [familyId], references: [id])
+  familyId        String? // solo aplica a SALIDA (a quién se le entregó, si ya está censada)
+  createdBy       User?        @relation(fields: [createdByUserId], references: [id])
   createdByUserId String?
-  occurredAt  DateTime     @default(now()) // momento real del movimiento (puede ser offline)
-  createdAt   DateTime     @default(now()) // momento en que llegó al servidor
+  occurredAt      DateTime     @default(now()) // momento real del movimiento (puede ser offline)
+  createdAt       DateTime     @default(now()) // momento en que llegó al servidor
 
   @@index([materialId])
   @@index([familyId])
@@ -90,30 +91,53 @@ enum ReviewStatus {
   RECHAZADO
 }
 
+enum DocumentType {
+  CC // Cédula de ciudadanía
+  TI // Tarjeta de identidad
+  CE // Cédula de extranjería
+  PA // Pasaporte
+  RC // Registro civil
+  PEP // Permiso Especial de Permanencia
+}
+
+// Catálogo de municipios para poblar el picklist del censo — sembrado desde
+// prisma/seed.ts. Family.municipality/department siguen siendo texto libre
+// (no FK): no hace falta integridad referencial para un campo descriptivo.
+model Municipio {
+  id         String @id @default(uuid())
+  name       String
+  department String
+
+  @@unique([name, department])
+}
+
 model Family {
-  id                    String       @id @default(uuid())
+  id                    String        @id @default(uuid())
   headOfHouseholdName   String
-  headOfHouseholdDocId  String? // cédula
+  documentType          DocumentType?
+  documentNumber        String? // cédula/documento
   phone                 String?
   address               String?
-  municipality          String?
+  municipality          String?       @default("Versalles")
+  department            String?       @default("Valle del Cauca")
   neighborhood          String? // barrio / vereda
   gpsLat                Float?
   gpsLng                Float?
-  memberCount           Int          @default(1)
-  hasResourcesToRebuild Boolean      @default(false)
-  selfRegistered        Boolean      @default(false) // vino del formulario público
-  reviewStatus          ReviewStatus @default(PENDIENTE)
-  registeredBy          User?        @relation(fields: [registeredByUserId], references: [id])
+  memberCount           Int           @default(1)
+  hasResourcesToRebuild Boolean       @default(false)
+  selfRegistered        Boolean       @default(false) // vino del formulario público
+  reviewStatus          ReviewStatus  @default(PENDIENTE)
+  registeredBy          User?         @relation(fields: [registeredByUserId], references: [id])
   registeredByUserId    String?
-  occurredAt            DateTime     @default(now()) // momento real del registro (offline-safe)
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  occurredAt            DateTime      @default(now()) // momento real del registro (offline-safe)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
-  members           Person[]
-  damageAssessment  DamageAssessment?
-  deliveries        InventoryMovement[]
-  media             MediaAsset[]
+  members          Person[]
+  damageAssessment DamageAssessment?
+  deliveries       InventoryMovement[]
+  media            MediaAsset[]
+  materialsNeeded  Material[]          @relation("FamilyMaterialsNeeded")
 
   @@index([reviewStatus])
 }
@@ -133,15 +157,15 @@ model Person {
 }
 
 model DamageAssessment {
-  id                    String      @id @default(uuid())
-  family                Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  familyId              String      @unique
-  damageLevel           DamageLevel
-  habitable             Boolean
-  description           String?
-  materialsNeeded       String? // lista libre por ahora (v2: relacionar con Material)
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  id              String      @id @default(uuid())
+  family          Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  familyId        String      @unique
+  damageLevel     DamageLevel
+  habitable       Boolean
+  description     String?
+  materialsNeeded String? // lista libre por ahora (v2: relacionar con Material)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }
 
 // Fotos de daños, recibos de donación, etc. — guardadas en R2, aquí solo la referencia.
