@@ -70,9 +70,14 @@ model InventoryMovement {
   createdByUserId String?
   occurredAt      DateTime     @default(now()) // momento real del movimiento (puede ser offline)
   createdAt       DateTime     @default(now()) // momento en que llegó al servidor
+  // Id generado en el cliente, compartido por todos los materiales de una
+  // misma entrega (Salida con varios materiales a la vez). Null en Entradas
+  // y en Salidas de un solo material — no hay nada que agrupar en ese caso.
+  deliveryId      String?
 
   @@index([materialId])
   @@index([familyId])
+  @@index([deliveryId])
 }
 
 // ---------- CENSO (prioridad 2) ----------

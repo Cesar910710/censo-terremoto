@@ -14,6 +14,12 @@ type Material = {
   category: string | null;
 };
 
+// El prop que recibe MovementForm trae además el disponible actual (para
+// filtrar y mostrar en el checklist de Salida) — pero ese número es volátil
+// (cambia con cada movimiento), así que nunca se guarda en la caché offline
+// de Dexie, solo se usa en memoria mientras dura la vista de esta página.
+type MaterialWithStock = Material & { disponible: number };
+
 const inputClass =
   "w-full rounded-md border border-black/[.08] bg-white px-3 py-2 text-sm dark:border-white/[.145] dark:bg-zinc-900";
 
@@ -154,19 +160,29 @@ function FamilySearchInput() {
   );
 }
 
-export function MovementForm({ materials }: { materials: Material[] }) {
+export function MovementForm({ materials }: { materials: MaterialWithStock[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<"ENTRADA" | "SALIDA">("ENTRADA");
   const [error, setError] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
-  const [lastQueued, setLastQueued] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState("");
+  const [confirmDescription, setConfirmDescription] = useState<string | undefined>(undefined);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
+  // Salida: cantidades por material seleccionado (id → texto de cantidad).
+  // Se maneja como estado propio, no como campos de formulario, porque cada
+  // fila del checklist necesita su propio input controlado.
+  const [salidaQuantities, setSalidaQuantities] = useState<Map<string, string>>(new Map());
+
   // Semilla la caché local con lo que llegó del servidor, así el <select>
-  // sigue funcionando aunque se pierda la conexión después.
+  // sigue funcionando aunque se pierda la conexión después. No se guarda
+  // "disponible" — es volátil, cambia con cada movimiento, y cachearlo
+  // llevaría a mostrar cantidades desactualizadas más adelante.
   useEffect(() => {
-    db.materials.bulkPut(materials).catch(() => {});
+    db.materials
+      .bulkPut(materials.map(({ id, name, unit, category }) => ({ id, name, unit, category })))
+      .catch(() => {});
   }, [materials]);
 
   const cachedMaterials = useLiveQuery(() => db.materials.orderBy("name").toArray(), [], materials);
@@ -190,21 +206,45 @@ export function MovementForm({ materials }: { materials: Material[] }) {
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [cachedMaterials, pendingMaterials, materials]);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-    const form = e.currentTarget;
-    const data = new FormData(form);
+  // El checklist de Salida solo tiene sentido para lo que hay disponible
+  // ahora mismo — se arma directo del prop (que ya trae el disponible del
+  // servidor), no de la caché offline, que a propósito no guarda stock.
+  const salidaMaterials = useMemo(
+    () => materials.filter((m) => m.disponible > 0),
+    [materials]
+  );
 
+  const salidaMaterialsByCategory = useMemo(() => {
+    const groups = new Map<string, MaterialWithStock[]>();
+    for (const m of salidaMaterials) {
+      const key = m.category ?? "Otros";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(m);
+    }
+    return [...groups.entries()];
+  }, [salidaMaterials]);
+
+  function toggleSalidaMaterial(materialId: string, checked: boolean) {
+    setSalidaQuantities((prev) => {
+      const next = new Map(prev);
+      if (checked) next.set(materialId, next.get(materialId) ?? "");
+      else next.delete(materialId);
+      return next;
+    });
+  }
+
+  function setSalidaQuantity(materialId: string, value: string) {
+    setSalidaQuantities((prev) => new Map(prev).set(materialId, value));
+  }
+
+  function handleSubmitEntrada(form: HTMLFormElement, data: FormData) {
     const body = {
       id: crypto.randomUUID(),
       materialId: data.get("materialId") as string,
-      type,
+      type: "ENTRADA",
       quantity: Number(data.get("quantity")),
       note: (data.get("note") as string) || undefined,
-      donorName: type === "ENTRADA" ? (data.get("donorName") as string) || undefined : undefined,
-      recipientName: type === "SALIDA" ? (data.get("recipientName") as string) || undefined : undefined,
-      familyId: type === "SALIDA" ? (data.get("familyId") as string) || undefined : undefined,
+      donorName: (data.get("donorName") as string) || undefined,
     };
 
     startTransition(async () => {
@@ -214,11 +254,99 @@ export function MovementForm({ materials }: { materials: Material[] }) {
         return;
       }
       form.reset();
-      setResetKey((k) => k + 1);
-      setLastQueued(result.queued);
+      setConfirmTitle(result.queued ? "Guardado localmente" : "Movimiento registrado correctamente");
+      setConfirmDescription(
+        result.queued ? "Se sincronizará automáticamente cuando haya conexión." : undefined
+      );
       if (!result.queued) router.refresh();
       dialogRef.current?.showModal();
     });
+  }
+
+  function handleSubmitSalida(form: HTMLFormElement, data: FormData) {
+    const entries = [...salidaQuantities.entries()].filter(([, qty]) => qty.trim() !== "");
+    if (entries.length === 0) {
+      setError("Selecciona al menos un material y su cantidad a entregar");
+      return;
+    }
+    if (entries.some(([, qty]) => !(Number(qty) > 0))) {
+      setError("La cantidad debe ser mayor a 0 para cada material seleccionado");
+      return;
+    }
+
+    const note = (data.get("note") as string) || undefined;
+    const recipientName = (data.get("recipientName") as string) || undefined;
+    const familyId = (data.get("familyId") as string) || undefined;
+
+    // Solo se comparte deliveryId cuando hay más de un material: así las
+    // entregas de un solo material quedan igual que antes (sin agrupar) en
+    // el historial.
+    const deliveryId = entries.length > 1 ? crypto.randomUUID() : undefined;
+
+    startTransition(async () => {
+      const results: { queued: boolean; error?: string }[] = [];
+      for (const [materialId, quantity] of entries) {
+        const body = {
+          id: crypto.randomUUID(),
+          materialId,
+          type: "SALIDA",
+          quantity: Number(quantity),
+          note,
+          recipientName,
+          familyId,
+          deliveryId,
+        };
+        results.push(await submitOrQueue("movement", "/api/inventory/movements", body));
+      }
+
+      const succeeded = results.filter((r) => !r.error);
+      const failed = results.filter((r) => r.error);
+
+      if (succeeded.length === 0) {
+        setError(failed[0]?.error ?? "No se pudo registrar la entrega");
+        return;
+      }
+
+      form.reset();
+      setSalidaQuantities(new Map());
+      setResetKey((k) => k + 1);
+
+      if (failed.length > 0) {
+        setError(`${failed.length} de ${results.length} materiales no se pudieron registrar.`);
+      } else {
+        setError(null);
+      }
+
+      const queuedCount = succeeded.filter((r) => r.queued).length;
+      const onlineCount = succeeded.length - queuedCount;
+      if (onlineCount > 0) router.refresh();
+
+      if (queuedCount === 0) {
+        setConfirmTitle("Entrega registrada correctamente");
+        setConfirmDescription(undefined);
+      } else if (queuedCount === succeeded.length) {
+        setConfirmTitle("Guardado localmente");
+        setConfirmDescription("Se sincronizará automáticamente cuando haya conexión.");
+      } else {
+        setConfirmTitle("Entrega registrada");
+        setConfirmDescription(
+          `${onlineCount} material(es) sincronizado(s) ahora, ${queuedCount} pendiente(s) por conexión.`
+        );
+      }
+      dialogRef.current?.showModal();
+    });
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    if (type === "ENTRADA") {
+      handleSubmitEntrada(form, data);
+    } else {
+      handleSubmitSalida(form, data);
+    }
   }
 
   if (availableMaterials.length === 0) {
@@ -253,36 +381,98 @@ export function MovementForm({ materials }: { materials: Material[] }) {
         </label>
       </div>
 
-      <select name="materialId" required className={inputClass} defaultValue="">
-        <option value="" disabled>
-          Selecciona un material
-        </option>
-        {availableMaterials.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.name} ({m.unit})
-          </option>
-        ))}
-      </select>
-
-      <input
-        type="number"
-        name="quantity"
-        step="any"
-        min="0"
-        placeholder="Cantidad"
-        required
-        className={inputClass}
-      />
-
       {type === "ENTRADA" ? (
-        <input
-          type="text"
-          name="donorName"
-          placeholder="Donante (opcional)"
-          className={inputClass}
-        />
+        <>
+          <select name="materialId" required className={inputClass} defaultValue="">
+            <option value="" disabled>
+              Selecciona un material
+            </option>
+            {availableMaterials.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} ({m.unit})
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            name="quantity"
+            step="any"
+            min="0"
+            placeholder="Cantidad"
+            required
+            className={inputClass}
+          />
+
+          <input
+            type="text"
+            name="donorName"
+            placeholder="Donante (opcional)"
+            className={inputClass}
+          />
+        </>
       ) : (
-        <FamilySearchInput key={resetKey} />
+        <>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="text-sm font-medium">Materiales a entregar</span>
+              <span className="text-xs text-zinc-500">
+                {salidaQuantities.size} seleccionado{salidaQuantities.size === 1 ? "" : "s"}
+              </span>
+            </div>
+            {salidaMaterials.length === 0 ? (
+              <p className="text-sm text-zinc-500">No hay materiales con stock disponible.</p>
+            ) : (
+            <div className="flex flex-col gap-2">
+              {salidaMaterialsByCategory.map(([category, items]) => (
+                <details
+                  key={category}
+                  className="rounded-md border border-black/[.08] dark:border-white/[.145]"
+                >
+                  <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium">
+                    {category} <span className="font-normal text-zinc-500">({items.length})</span>
+                  </summary>
+                  <div className="flex flex-col gap-2 border-t border-black/[.08] px-3 py-2 dark:border-white/[.145]">
+                    {items.map((m) => {
+                      const checked = salidaQuantities.has(m.id);
+                      return (
+                        <div key={m.id} className="flex items-center gap-2">
+                          <label className="flex flex-1 items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => toggleSalidaMaterial(m.id, e.target.checked)}
+                            />
+                            <span>
+                              {m.name} ({m.unit})
+                              <span className="ml-1 text-xs text-zinc-500">
+                                · Disponible: {m.disponible}
+                              </span>
+                            </span>
+                          </label>
+                          {checked && (
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              placeholder="Cantidad"
+                              value={salidaQuantities.get(m.id) ?? ""}
+                              onChange={(e) => setSalidaQuantity(m.id, e.target.value)}
+                              className="w-24 rounded-md border border-black/[.08] bg-white px-2 py-1.5 text-sm dark:border-white/[.145] dark:bg-zinc-900"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              ))}
+            </div>
+            )}
+          </div>
+
+          <FamilySearchInput key={resetKey} />
+        </>
       )}
 
       <textarea
@@ -303,11 +493,7 @@ export function MovementForm({ materials }: { materials: Material[] }) {
       </button>
     </form>
 
-    <ConfirmDialog
-      dialogRef={dialogRef}
-      title={lastQueued ? "Guardado localmente" : "Movimiento registrado correctamente"}
-      description={lastQueued ? "Se sincronizará automáticamente cuando haya conexión." : undefined}
-    />
+    <ConfirmDialog dialogRef={dialogRef} title={confirmTitle} description={confirmDescription} />
     </>
   );
 }

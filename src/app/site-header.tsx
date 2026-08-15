@@ -32,6 +32,9 @@ export function SiteHeader() {
           <Link href="/censo" className="hover:underline">
             Censo
           </Link>
+          <Link href="/inventario/movimientos/historial" className="hover:underline">
+            Historial de movimientos
+          </Link>
         </nav>
       )}
     </header>

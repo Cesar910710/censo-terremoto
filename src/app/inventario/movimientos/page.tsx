@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getStock } from "@/lib/inventory";
 import { MovementForm, NewMaterialForm } from "../forms";
 import { SyncStatus, PendingQueue } from "@/app/offline-ui";
 
@@ -9,7 +9,17 @@ import { SyncStatus, PendingQueue } from "@/app/offline-ui";
 export const dynamic = "force-dynamic";
 
 export default async function MovimientosPage() {
-  const materials = await prisma.material.findMany({ orderBy: { name: "asc" } });
+  // getStock() (no prisma.material.findMany directo) porque el formulario de
+  // Salida necesita saber cuánto hay disponible de cada material para
+  // filtrar y mostrar la cantidad.
+  const stock = await getStock();
+  const materials = stock.map((s) => ({
+    id: s.materialId,
+    name: s.name,
+    unit: s.unit,
+    category: s.category,
+    disponible: s.disponible,
+  }));
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">

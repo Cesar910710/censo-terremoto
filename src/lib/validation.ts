@@ -17,6 +17,7 @@ export const movementSchema = z.object({
   recipientName: z.string().optional(),
   familyId: z.string().uuid().optional(),
   occurredAt: z.string().datetime().optional(),
+  deliveryId: z.string().uuid().optional(),
 });
 
 export const familySchema = z.object({
