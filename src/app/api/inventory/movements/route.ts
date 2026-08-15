@@ -10,9 +10,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  // upsert por id (no create): permite reintentos idempotentes desde la cola
+  // offline — si el insert ya había llegado antes de perderse la respuesta,
+  // reenviar el mismo id no duplica el movimiento.
+  const id = parsed.data.id ?? crypto.randomUUID();
+
   try {
-    const movement = await prisma.inventoryMovement.create({
-      data: parsed.data,
+    const movement = await prisma.inventoryMovement.upsert({
+      where: { id },
+      update: {},
+      create: { ...parsed.data, id },
     });
     return NextResponse.json(movement, { status: 201 });
   } catch (err) {

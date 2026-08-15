@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { MovementForm } from "../forms";
+import { MovementForm, PendingQueue } from "../forms";
+import { SyncStatus } from "../sync-status";
 
 // Los movimientos recientes cambian con cada registro; sin esto Next
 // prerenderiza la página una sola vez en build y sirve datos desactualizados
@@ -26,9 +27,13 @@ export default async function MovimientosPage() {
         <h1 className="text-xl font-semibold tracking-tight">Registrar movimiento</h1>
       </div>
 
+      <SyncStatus />
+
       <section className="flex flex-col gap-3">
         <MovementForm materials={materials} />
       </section>
+
+      <PendingQueue />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-zinc-500">Movimientos recientes</h2>

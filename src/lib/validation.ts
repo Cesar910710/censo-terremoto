@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 export const materialSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().min(1, "Nombre requerido"),
   unit: z.string().min(1, "Unidad requerida"),
   category: z.string().optional(),
 });
 
 export const movementSchema = z.object({
+  id: z.string().uuid().optional(),
   materialId: z.string().uuid(),
   type: z.enum(["ENTRADA", "SALIDA"]),
   quantity: z.number().positive("La cantidad debe ser mayor a 0"),
