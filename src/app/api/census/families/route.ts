@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     create: {
       id,
       ...data,
-      materialsNeeded: { connect: materialsNeeded.map((materialId) => ({ id: materialId })) },
+      materialsNeeded: { connect: (materialsNeeded ?? []).map((materialId) => ({ id: materialId })) },
     },
   });
 

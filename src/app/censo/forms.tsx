@@ -63,18 +63,33 @@ export function FamilyForm({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    // El checklist de materiales no soporta el atributo required nativo de
+    // HTML (es un grupo de checkboxes), así que en /registro (autorregistro)
+    // se valida a mano — ahí sí importa saber qué necesita la familia. En
+    // censo/registrar queda opcional, igual que el resto de campos.
+    if (selfRegistered && selectedIds.size === 0) {
+      setError("Selecciona al menos un material");
+      return;
+    }
+
     const form = e.currentTarget;
     const data = new FormData(form);
+
+    // Solo headOfHouseholdName es obligatorio; el resto queda como undefined
+    // (no como string vacío) si no se llenó, para que se guarde NULL en vez
+    // de "" y los fallback ("—") de los listados sigan funcionando.
+    const optionalText = (name: string) => (data.get(name) as string) || undefined;
 
     const body = {
       id: crypto.randomUUID(),
       headOfHouseholdName: data.get("headOfHouseholdName") as string,
-      documentType: data.get("documentType") as string,
-      documentNumber: data.get("documentNumber") as string,
-      phone: data.get("phone") as string,
-      address: data.get("address") as string,
-      municipality: data.get("municipality") as string,
-      department: data.get("department") as string,
+      documentType: optionalText("documentType"),
+      documentNumber: optionalText("documentNumber"),
+      phone: optionalText("phone"),
+      address: optionalText("address"),
+      municipality: optionalText("municipality"),
+      department: optionalText("department"),
       materialsNeeded: data.getAll("materialsNeeded") as string[],
       selfRegistered,
     };
@@ -105,7 +120,7 @@ export function FamilyForm({
       />
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <select name="documentType" required className={inputClass} defaultValue="CC">
+        <select name="documentType" required={selfRegistered} className={inputClass} defaultValue="CC">
           {Object.entries(documentTypeLabel).map(([code, label]) => (
             <option key={code} value={code}>
               {label}
@@ -116,7 +131,7 @@ export function FamilyForm({
           type="text"
           name="documentNumber"
           placeholder="Número de identificación"
-          required
+          required={selfRegistered}
           className={inputClass}
         />
       </div>
@@ -125,16 +140,22 @@ export function FamilyForm({
         type="tel"
         name="phone"
         placeholder="Número de contacto"
-        required
+        required={selfRegistered}
         className={inputClass}
       />
 
-      <input type="text" name="address" placeholder="Dirección" required className={inputClass} />
+      <input
+        type="text"
+        name="address"
+        placeholder="Dirección"
+        required={selfRegistered}
+        className={inputClass}
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <select
           name="municipality"
-          required
+          required={selfRegistered}
           className={inputClass}
           defaultValue={municipios.includes("Versalles") ? "Versalles" : municipios[0]}
         >
@@ -147,7 +168,7 @@ export function FamilyForm({
         <input
           type="text"
           name="department"
-          required
+          required={selfRegistered}
           defaultValue="Valle del Cauca"
           className={inputClass}
         />
@@ -230,7 +251,7 @@ export function FamilyForm({
               : "¡Listo! Tu solicitud fue registrada."
             : lastQueued
               ? "Guardado localmente"
-              : "Familia registrada correctamente."}
+              : "Beneficiario registrado correctamente."}
         </p>
         {selfRegistered && (
           <p className="text-zinc-600 dark:text-zinc-400">

@@ -30,7 +30,7 @@ export default async function RegistrarFamiliaPage() {
         <Link href="/censo" className="text-sm text-zinc-500 hover:underline">
           ← Censo
         </Link>
-        <h1 className="text-xl font-semibold tracking-tight">Registrar familia</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Registrar beneficiario</h1>
       </div>
 
       <SyncStatus />

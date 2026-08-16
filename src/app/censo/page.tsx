@@ -20,7 +20,7 @@ export default async function CensoPage() {
           href="/censo/registrar"
           className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
         >
-          Registrar familia
+          Registrar beneficiario
         </Link>
       </div>
 
