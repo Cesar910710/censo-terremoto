@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getStock } from "@/lib/inventory";
 import { NewMaterialForm } from "./forms";
+import { DeleteMaterialButton } from "./delete-material";
 
 // El stock cambia con cada donación/entrega registrada; sin esto Next
 // prerenderiza la página una sola vez en build y sirve datos desactualizados
@@ -38,15 +39,18 @@ export default async function InventarioPage() {
               {stock.map((s) => (
                 <div
                   key={s.materialId}
-                  className="flex items-center justify-between gap-3 rounded-md border border-black/[.08] p-3 dark:border-white/[.145]"
+                  className="flex flex-col gap-2 rounded-md border border-black/[.08] p-3 dark:border-white/[.145]"
                 >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{s.name}</span>
-                    <span className="text-xs text-zinc-500">
-                      {s.unit} · {s.category ?? "—"}
-                    </span>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium">{s.name}</span>
+                      <span className="text-xs text-zinc-500">
+                        {s.unit} · {s.category ?? "—"}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-lg font-semibold">{s.disponible}</span>
                   </div>
-                  <span className="shrink-0 text-lg font-semibold">{s.disponible}</span>
+                  <DeleteMaterialButton materialId={s.materialId} materialName={s.name} />
                 </div>
               ))}
             </div>
@@ -59,6 +63,7 @@ export default async function InventarioPage() {
                     <th className="px-3 py-2 font-medium">Unidad</th>
                     <th className="px-3 py-2 font-medium">Categoría</th>
                     <th className="px-3 py-2 text-right font-medium">Disponible</th>
+                    <th className="px-3 py-2 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -68,6 +73,9 @@ export default async function InventarioPage() {
                       <td className="px-3 py-2">{s.unit}</td>
                       <td className="px-3 py-2">{s.category ?? "—"}</td>
                       <td className="px-3 py-2 text-right font-medium">{s.disponible}</td>
+                      <td className="px-3 py-2">
+                        <DeleteMaterialButton materialId={s.materialId} materialName={s.name} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

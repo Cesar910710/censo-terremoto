@@ -23,19 +23,35 @@ const documentTypeLabel: Record<string, string> = {
   PEP: "Permiso Especial de Permanencia (PEP)",
 };
 
+type EditingFamily = {
+  id: string;
+  headOfHouseholdName: string;
+  documentType: string | null;
+  documentNumber: string | null;
+  phone: string | null;
+  address: string | null;
+  municipality: string | null;
+  department: string | null;
+  materialsNeeded: string[];
+};
+
 export function FamilyForm({
   materials,
   municipios,
   selfRegistered,
+  editingFamily,
 }: {
   materials: Material[];
   municipios: string[];
   selfRegistered: boolean;
+  editingFamily?: EditingFamily;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    new Set(editingFamily?.materialsNeeded ?? [])
+  );
   const [lastQueued, setLastQueued] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -81,8 +97,7 @@ export function FamilyForm({
     // de "" y los fallback ("—") de los listados sigan funcionando.
     const optionalText = (name: string) => (data.get(name) as string) || undefined;
 
-    const body = {
-      id: crypto.randomUUID(),
+    const fields = {
       headOfHouseholdName: data.get("headOfHouseholdName") as string,
       documentType: optionalText("documentType"),
       documentNumber: optionalText("documentNumber"),
@@ -91,8 +106,35 @@ export function FamilyForm({
       municipality: optionalText("municipality"),
       department: optionalText("department"),
       materialsNeeded: data.getAll("materialsNeeded") as string[],
-      selfRegistered,
     };
+
+    // Editar es una corrección administrativa poco frecuente, no una acción
+    // crítica de campo como el registro inicial — a diferencia del resto del
+    // módulo, no pasa por la cola offline; si no hay conexión simplemente
+    // falla con un mensaje claro en vez de encolarse.
+    if (editingFamily) {
+      startTransition(async () => {
+        try {
+          const res = await fetch(`/api/census/families/${editingFamily.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(fields),
+          });
+          const resData = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setError(typeof resData.error === "string" ? resData.error : "No se pudo guardar los cambios");
+            return;
+          }
+          router.push("/censo");
+          router.refresh();
+        } catch {
+          setError("No se pudo guardar. Verifica tu conexión.");
+        }
+      });
+      return;
+    }
+
+    const body = { id: crypto.randomUUID(), ...fields, selfRegistered };
 
     startTransition(async () => {
       const result = await submitOrQueue("family", "/api/census/families", body);
@@ -116,11 +158,17 @@ export function FamilyForm({
         name="headOfHouseholdName"
         placeholder="Nombres y apellidos"
         required
+        defaultValue={editingFamily?.headOfHouseholdName}
         className={inputClass}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <select name="documentType" required={selfRegistered} className={inputClass} defaultValue="CC">
+        <select
+          name="documentType"
+          required={selfRegistered}
+          className={inputClass}
+          defaultValue={editingFamily?.documentType ?? "CC"}
+        >
           {Object.entries(documentTypeLabel).map(([code, label]) => (
             <option key={code} value={code}>
               {label}
@@ -132,6 +180,7 @@ export function FamilyForm({
           name="documentNumber"
           placeholder="Número de identificación"
           required={selfRegistered}
+          defaultValue={editingFamily?.documentNumber ?? undefined}
           className={inputClass}
         />
       </div>
@@ -141,6 +190,7 @@ export function FamilyForm({
         name="phone"
         placeholder="Número de contacto"
         required={selfRegistered}
+        defaultValue={editingFamily?.phone ?? undefined}
         className={inputClass}
       />
 
@@ -149,6 +199,7 @@ export function FamilyForm({
         name="address"
         placeholder="Dirección"
         required={selfRegistered}
+        defaultValue={editingFamily?.address ?? undefined}
         className={inputClass}
       />
 
@@ -157,7 +208,9 @@ export function FamilyForm({
           name="municipality"
           required={selfRegistered}
           className={inputClass}
-          defaultValue={municipios.includes("Versalles") ? "Versalles" : municipios[0]}
+          defaultValue={
+            editingFamily?.municipality ?? (municipios.includes("Versalles") ? "Versalles" : municipios[0])
+          }
         >
           {municipios.map((m) => (
             <option key={m} value={m}>
@@ -169,7 +222,7 @@ export function FamilyForm({
           type="text"
           name="department"
           required={selfRegistered}
-          defaultValue="Valle del Cauca"
+          defaultValue={editingFamily?.department ?? "Valle del Cauca"}
           className={inputClass}
         />
       </div>
@@ -209,6 +262,7 @@ export function FamilyForm({
                         type="checkbox"
                         name="materialsNeeded"
                         value={m.id}
+                        defaultChecked={selectedIds.has(m.id)}
                         className={selfRegistered ? "accent-blue-400" : undefined}
                       />
                       {m.name} ({m.unit})
@@ -232,7 +286,7 @@ export function FamilyForm({
             : "rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
         }
       >
-        {isPending ? "Guardando..." : "Registrar solicitud"}
+        {isPending ? "Guardando..." : editingFamily ? "Guardar cambios" : "Registrar solicitud"}
       </button>
     </form>
 

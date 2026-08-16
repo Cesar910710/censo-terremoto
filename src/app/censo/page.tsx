@@ -52,9 +52,17 @@ export default async function CensoPage() {
                   <span className="text-zinc-600 dark:text-zinc-400">
                     {f.materialsNeeded.map((m) => m.name).join(", ") || "—"}
                   </span>
-                  <span className="text-xs text-zinc-500">
-                    {f.selfRegistered ? "Autorregistro" : "Interno"}
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-zinc-500">
+                      {f.selfRegistered ? "Autorregistro" : "Interno"}
+                    </span>
+                    <Link
+                      href={`/censo/${f.id}/editar`}
+                      className="rounded-md border border-black/[.08] px-3 py-1 text-xs font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+                    >
+                      Editar
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
@@ -70,6 +78,7 @@ export default async function CensoPage() {
                     <th className="px-3 py-2 font-medium">Materiales</th>
                     <th className="px-3 py-2 font-medium">Origen</th>
                     <th className="px-3 py-2 font-medium">Estado</th>
+                    <th className="px-3 py-2 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -88,6 +97,14 @@ export default async function CensoPage() {
                       </td>
                       <td className="px-3 py-2">{f.selfRegistered ? "Autorregistro" : "Interno"}</td>
                       <td className="px-3 py-2">{f.reviewStatus}</td>
+                      <td className="px-3 py-2">
+                        <Link
+                          href={`/censo/${f.id}/editar`}
+                          className="rounded-md border border-black/[.08] px-3 py-1 text-xs font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+                        >
+                          Editar
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
