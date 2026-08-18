@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getStock } from "@/lib/inventory";
 import { NewMaterialForm } from "./forms";
-import { DeleteMaterialButton } from "./delete-material";
+import { StockTable } from "./stock-table";
 
 // El stock cambia con cada donación/entrega registrada; sin esto Next
 // prerenderiza la página una sola vez en build y sirve datos desactualizados
@@ -31,64 +31,7 @@ export default async function InventarioPage() {
         {stock.length === 0 ? (
           <p className="text-sm text-zinc-500">Aún no hay materiales registrados.</p>
         ) : (
-          <>
-            {/* Mobile: tarjetas apiladas — una tabla de 4 columnas no cabe
-                legible en un teléfono, así que por debajo de md se listan
-                como tarjetas y la tabla queda solo para pantallas grandes. */}
-            <div className="flex flex-col gap-2 md:hidden">
-              {stock.map((s) => (
-                <div
-                  key={s.materialId}
-                  className="flex flex-col gap-1.5 rounded-md border border-black/[.08] p-3 text-sm dark:border-white/[.145]"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-zinc-500">Material</span>
-                    <span className="text-right font-medium">{s.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-zinc-500">Unidad</span>
-                    <span className="text-right">{s.unit}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-zinc-500">Categoría</span>
-                    <span className="text-right">{s.category ?? "—"}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-zinc-500">Disponible</span>
-                    <span className="text-right font-semibold">{s.disponible}</span>
-                  </div>
-                  <DeleteMaterialButton materialId={s.materialId} materialName={s.name} />
-                </div>
-              ))}
-            </div>
-
-            <div className="hidden overflow-x-auto rounded-md border border-black/[.08] dark:border-white/[.145] md:block">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-black/[.08] text-left dark:border-white/[.145]">
-                    <th className="px-3 py-2 font-medium">Material</th>
-                    <th className="px-3 py-2 font-medium">Unidad</th>
-                    <th className="px-3 py-2 font-medium">Categoría</th>
-                    <th className="px-3 py-2 text-right font-medium">Disponible</th>
-                    <th className="px-3 py-2 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stock.map((s) => (
-                    <tr key={s.materialId} className="border-b border-black/[.04] last:border-0 dark:border-white/[.08]">
-                      <td className="px-3 py-2">{s.name}</td>
-                      <td className="px-3 py-2">{s.unit}</td>
-                      <td className="px-3 py-2">{s.category ?? "—"}</td>
-                      <td className="px-3 py-2 text-right font-medium">{s.disponible}</td>
-                      <td className="px-3 py-2">
-                        <DeleteMaterialButton materialId={s.materialId} materialName={s.name} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+          <StockTable stock={stock} />
         )}
       </section>
     </main>
