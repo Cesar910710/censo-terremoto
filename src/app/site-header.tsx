@@ -22,6 +22,9 @@ export function SiteHeader() {
       )}
       {!isPublicLanding && (
         <nav className="flex gap-4 text-sm font-medium">
+          <Link href="/" className="hover:underline">
+            Inicio
+          </Link>
           <Link href="/inventario" className="hover:underline">
             Inventario
           </Link>

@@ -39,16 +39,23 @@ export default async function InventarioPage() {
               {stock.map((s) => (
                 <div
                   key={s.materialId}
-                  className="flex flex-col gap-2 rounded-md border border-black/[.08] p-3 dark:border-white/[.145]"
+                  className="flex flex-col gap-1.5 rounded-md border border-black/[.08] p-3 text-sm dark:border-white/[.145]"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-medium">{s.name}</span>
-                      <span className="text-xs text-zinc-500">
-                        {s.unit} · {s.category ?? "—"}
-                      </span>
-                    </div>
-                    <span className="shrink-0 text-lg font-semibold">{s.disponible}</span>
+                    <span className="text-xs text-zinc-500">Material</span>
+                    <span className="text-right font-medium">{s.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Unidad</span>
+                    <span className="text-right">{s.unit}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Categoría</span>
+                    <span className="text-right">{s.category ?? "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Disponible</span>
+                    <span className="text-right font-semibold">{s.disponible}</span>
                   </div>
                   <DeleteMaterialButton materialId={s.materialId} materialName={s.name} />
                 </div>

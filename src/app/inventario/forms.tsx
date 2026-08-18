@@ -76,6 +76,12 @@ function FamilySearchInput() {
   const [results, setResults] = useState<FamilyMatch[]>([]);
   const [selected, setSelected] = useState<FamilyMatch | null>(null);
   const [open, setOpen] = useState(false);
+  // El cierre en onBlur se retrasa 150ms para no cerrar antes de procesar el
+  // click en un resultado — pero si el usuario vuelve a enfocar/escribir
+  // dentro de esos 150ms (p.ej. tras "quitar"), ese timeout viejo puede
+  // reabrirse en falso a "cerrado" pisando el setOpen(true) más reciente.
+  // Se guarda el id para poder cancelarlo en cuanto haya una interacción nueva.
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (selected || query.trim().length < 2) {
@@ -108,11 +114,17 @@ function FamilySearchInput() {
         placeholder="Familia / persona que recibe (opcional)"
         value={selected ? selected.headOfHouseholdName : query}
         onChange={(e) => {
+          if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
           setSelected(null);
           setQuery(e.target.value);
         }}
-        onFocus={() => visibleResults.length > 0 && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onFocus={() => {
+          if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+          if (visibleResults.length > 0) setOpen(true);
+        }}
+        onBlur={() => {
+          blurTimeoutRef.current = setTimeout(() => setOpen(false), 150);
+        }}
         autoComplete="off"
         className={inputClass}
       />
@@ -155,6 +167,187 @@ function FamilySearchInput() {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+// Buscador con autocompletado sobre los materiales ya cargados en memoria
+// (a diferencia de FamilySearchInput, no hace falta pedirlos al servidor —
+// Entrada ya recibe la lista completa sin filtrar por stock). Si lo que se
+// busca no existe, permite crearlo ahí mismo sin salir del formulario de
+// movimiento; al crearlo queda seleccionado de inmediato.
+function MaterialSearchInput({ materials }: { materials: Material[] }) {
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Material | null>(null);
+  const [open, setOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createUnit, setCreateUnit] = useState("");
+  const [createCategory, setCreateCategory] = useState("");
+  const [createPending, startCreateTransition] = useTransition();
+  const [createError, setCreateError] = useState<string | null>(null);
+  // Ver el comentario equivalente en FamilySearchInput: cancela el cierre en
+  // onBlur si el usuario vuelve a interactuar dentro de los 150ms, para que
+  // un timeout viejo no cierre el dropdown justo después de reabrirlo.
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return materials;
+    return materials.filter((m) => m.name.toLowerCase().includes(q));
+  }, [query, materials]);
+
+  const visibleResults = selected ? [] : filtered;
+
+  function handleCreate() {
+    const name = query.trim();
+    if (!name || !createUnit.trim()) {
+      setCreateError("Nombre y unidad son obligatorios");
+      return;
+    }
+    setCreateError(null);
+    const body = {
+      id: crypto.randomUUID(),
+      name,
+      unit: createUnit.trim(),
+      category: createCategory || undefined,
+    };
+    startCreateTransition(async () => {
+      const result = await submitOrQueue("material", "/api/materials", body);
+      if (result.error) {
+        setCreateError(result.error);
+        return;
+      }
+      setSelected({ id: body.id, name: body.name, unit: body.unit, category: body.category ?? null });
+      setShowCreate(false);
+      setOpen(false);
+    });
+  }
+
+  return (
+    <div className="relative flex flex-col gap-1">
+      <input
+        type="text"
+        placeholder="Buscar material..."
+        value={selected ? `${selected.name} (${selected.unit})` : query}
+        onChange={(e) => {
+          if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+          setSelected(null);
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => {
+          if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+          setOpen(true);
+        }}
+        onBlur={() => {
+          blurTimeoutRef.current = setTimeout(() => setOpen(false), 150);
+        }}
+        autoComplete="off"
+        required
+        className={inputClass}
+      />
+      <input type="hidden" name="materialId" required value={selected?.id ?? ""} />
+
+      {selected && (
+        <span className="text-xs text-green-700 dark:text-green-500">
+          ✓ Seleccionado{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setSelected(null);
+              setQuery("");
+            }}
+            className="underline"
+          >
+            cambiar
+          </button>
+        </span>
+      )}
+
+      {(open || showCreate) && !selected && (
+        <div className="absolute top-full z-10 mt-1 w-full rounded-md border border-black/[.08] bg-white text-sm shadow-md dark:border-white/[.145] dark:bg-zinc-900">
+          {!showCreate && (
+            <>
+              {visibleResults.length > 0 && (
+                <ul className="max-h-56 overflow-y-auto">
+                  {visibleResults.map((m) => (
+                    <li key={m.id}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setSelected(m);
+                          setOpen(false);
+                        }}
+                        className="block w-full px-3 py-2 text-left hover:bg-black/[.04] dark:hover:bg-white/[.06]"
+                      >
+                        {m.name} ({m.unit})
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setShowCreate(true)}
+                className={`block w-full px-3 py-2 text-left text-zinc-600 hover:bg-black/[.04] dark:text-zinc-400 dark:hover:bg-white/[.06] ${visibleResults.length > 0 ? "border-t border-black/[.08] dark:border-white/[.145]" : ""}`}
+              >
+                + Crear material nuevo{query.trim() ? ` "${query.trim()}"` : ""}
+              </button>
+            </>
+          )}
+
+          {showCreate && (
+            <div className="flex flex-col gap-2 p-3">
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                placeholder="Unidad (bulto, saco, m2...)"
+                value={createUnit}
+                onChange={(e) => setCreateUnit(e.target.value)}
+                className={inputClass}
+              />
+              <select
+                value={createCategory}
+                onChange={(e) => setCreateCategory(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Categoría (opcional)</option>
+                {CATEGORIAS.map((cat) => (
+                  <option key={cat.codigo} value={cat.nombre}>
+                    {cat.nombre}
+                  </option>
+                ))}
+              </select>
+              {createError && <p className="text-xs text-red-600">{createError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={createPending}
+                  className="rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background disabled:opacity-50"
+                >
+                  {createPending ? "Creando..." : "Crear y seleccionar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="rounded-md px-3 py-1.5 text-xs font-medium"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -238,9 +431,17 @@ export function MovementForm({ materials }: { materials: MaterialWithStock[] }) 
   }
 
   function handleSubmitEntrada(form: HTMLFormElement, data: FormData) {
+    const materialId = data.get("materialId") as string;
+    // El input de materialId es un <input type="hidden">, así que "required"
+    // no lo valida el navegador (los hidden lo ignoran) — se valida a mano.
+    if (!materialId) {
+      setError("Busca y selecciona un material");
+      return;
+    }
+
     const body = {
       id: crypto.randomUUID(),
-      materialId: data.get("materialId") as string,
+      materialId,
       type: "ENTRADA",
       quantity: Number(data.get("quantity")),
       note: (data.get("note") as string) || undefined,
@@ -254,6 +455,7 @@ export function MovementForm({ materials }: { materials: MaterialWithStock[] }) 
         return;
       }
       form.reset();
+      setResetKey((k) => k + 1);
       setConfirmTitle(result.queued ? "Guardado localmente" : "Movimiento registrado correctamente");
       setConfirmDescription(
         result.queued ? "Se sincronizará automáticamente cuando haya conexión." : undefined
@@ -383,16 +585,7 @@ export function MovementForm({ materials }: { materials: MaterialWithStock[] }) 
 
       {type === "ENTRADA" ? (
         <>
-          <select name="materialId" required className={inputClass} defaultValue="">
-            <option value="" disabled>
-              Selecciona un material
-            </option>
-            {availableMaterials.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.unit})
-              </option>
-            ))}
-          </select>
+          <MaterialSearchInput key={resetKey} materials={availableMaterials} />
 
           <input
             type="number"

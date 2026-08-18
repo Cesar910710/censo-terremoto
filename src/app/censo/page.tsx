@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { MaterialsNeededDetailButton } from "./materials-needed-detail";
 
 // Igual que /inventario: esta página solo consulta Prisma directo (sin
 // fetch/cookies), así que Next la prerenderizaría estática en build sin este
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function CensoPage() {
   const families = await prisma.family.findMany({
     orderBy: { createdAt: "desc" },
-    include: { materialsNeeded: { select: { name: true } } },
+    include: { materialsNeeded: { select: { name: true, unit: true } } },
   });
 
   return (
@@ -37,32 +38,55 @@ export default async function CensoPage() {
               {families.map((f) => (
                 <div
                   key={f.id}
-                  className="flex flex-col gap-1 rounded-md border border-black/[.08] p-3 text-sm dark:border-white/[.145]"
+                  className="flex flex-col gap-1.5 rounded-md border border-black/[.08] p-3 text-sm dark:border-white/[.145]"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{f.headOfHouseholdName}</span>
-                    <span className="shrink-0 text-xs text-zinc-500">{f.reviewStatus}</span>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Nombre</span>
+                    <span className="text-right font-medium">{f.headOfHouseholdName}</span>
                   </div>
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {f.documentType} {f.documentNumber} · {f.phone ?? "—"}
-                  </span>
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {f.municipality}, {f.department}
-                  </span>
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {f.materialsNeeded.map((m) => m.name).join(", ") || "—"}
-                  </span>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-zinc-500">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Documento</span>
+                    <span className="text-right">
+                      {f.documentType} {f.documentNumber}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Teléfono</span>
+                    <span className="text-right">{f.phone ?? "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Municipio</span>
+                    <span className="text-right">
+                      {f.municipality}, {f.department}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Materiales</span>
+                    {f.materialsNeeded.length > 0 ? (
+                      <MaterialsNeededDetailButton
+                        beneficiaryName={f.headOfHouseholdName}
+                        materials={f.materialsNeeded}
+                      />
+                    ) : (
+                      <span className="text-right">—</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Origen</span>
+                    <span className="text-right">
                       {f.selfRegistered ? "Autorregistro" : "Interno"}
                     </span>
-                    <Link
-                      href={`/censo/${f.id}/editar`}
-                      className="rounded-md border border-black/[.08] px-3 py-1 text-xs font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
-                    >
-                      Editar
-                    </Link>
                   </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Estado</span>
+                    <span className="text-right">{f.reviewStatus}</span>
+                  </div>
+                  <Link
+                    href={`/censo/${f.id}/editar`}
+                    className="rounded-md border border-black/[.08] px-3 py-1.5 text-center text-xs font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+                  >
+                    Editar
+                  </Link>
                 </div>
               ))}
             </div>
@@ -93,7 +117,14 @@ export default async function CensoPage() {
                         {f.municipality}, {f.department}
                       </td>
                       <td className="px-3 py-2">
-                        {f.materialsNeeded.map((m) => m.name).join(", ") || "—"}
+                        {f.materialsNeeded.length > 0 ? (
+                          <MaterialsNeededDetailButton
+                            beneficiaryName={f.headOfHouseholdName}
+                            materials={f.materialsNeeded}
+                          />
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-3 py-2">{f.selfRegistered ? "Autorregistro" : "Interno"}</td>
                       <td className="px-3 py-2">{f.reviewStatus}</td>

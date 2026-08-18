@@ -89,23 +89,42 @@ export default async function HistorialMovimientosPage() {
             {rows.map((r) => (
               <div
                 key={r.key}
-                className="flex flex-col gap-1 rounded-md border border-black/[.08] p-3 text-sm dark:border-white/[.145]"
+                className="flex flex-col gap-1.5 rounded-md border border-black/[.08] p-3 text-sm dark:border-white/[.145]"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{r.type === "ENTRADA" ? "Entrada" : "Salida"}</span>
-                  <span className="text-xs text-zinc-500 whitespace-nowrap">
-                    {r.occurredAt.toLocaleString("es-CO")}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-zinc-500">Fecha</span>
+                  <span className="text-right">{r.occurredAt.toLocaleString("es-CO")}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-zinc-500">Tipo</span>
+                  <span className="text-right font-medium">
+                    {r.type === "ENTRADA" ? "Entrada" : "Salida"}
                   </span>
                 </div>
-                {r.materials.length > 1 ? (
-                  <span>{r.materials.length} materiales entregados</span>
-                ) : (
-                  <span>
-                    {r.materials[0].name} ({r.materials[0].unit}) · {r.materials[0].quantity}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-zinc-500">Material</span>
+                  <span className="text-right">
+                    {r.materials.length > 1
+                      ? `${r.materials.length} materiales`
+                      : `${r.materials[0].name} (${r.materials[0].unit})`}
                   </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-zinc-500">Cantidad</span>
+                  <span className="text-right">
+                    {r.materials.length > 1 ? "—" : r.materials[0].quantity}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-zinc-500">Donante / destinatario</span>
+                  <span className="text-right">{r.recipient}</span>
+                </div>
+                {r.note && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-zinc-500">Nota</span>
+                    <span className="text-right">{r.note}</span>
+                  </div>
                 )}
-                <span className="text-zinc-600 dark:text-zinc-400">{r.recipient}</span>
-                {r.note && <span className="text-xs text-zinc-500">{r.note}</span>}
                 {r.type === "SALIDA" && (
                   <DeliveryDetailButton recipient={r.recipient} materials={r.materials} />
                 )}
