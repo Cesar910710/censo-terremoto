@@ -17,7 +17,7 @@ type Family = {
   materialsNeeded: { name: string; unit: string }[];
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 const inputClass =
   "w-full max-w-xs rounded-md border border-black/[.08] bg-white px-3 py-2 text-sm dark:border-white/[.145] dark:bg-zinc-900";
 
@@ -26,9 +26,11 @@ export function FamiliesTable({ families }: { families: Family[] }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const filtered = useMemo(() => {
-    const q = search.trim();
+    const q = search.trim().toLowerCase();
     if (!q) return families;
-    return families.filter((f) => f.documentNumber?.includes(q));
+    return families.filter(
+      (f) => f.documentNumber?.includes(search.trim()) || f.headOfHouseholdName.toLowerCase().includes(q)
+    );
   }, [search, families]);
 
   const visible = filtered.slice(0, visibleCount);
@@ -37,7 +39,7 @@ export function FamiliesTable({ families }: { families: Family[] }) {
     <div className="flex flex-col gap-3">
       <input
         type="text"
-        placeholder="Buscar por documento..."
+        placeholder="Buscar por documento o nombre..."
         value={search}
         onChange={(e) => {
           setSearch(e.target.value);
@@ -47,7 +49,7 @@ export function FamiliesTable({ families }: { families: Family[] }) {
       />
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-zinc-500">No se encontraron beneficiarios con ese documento.</p>
+        <p className="text-sm text-zinc-500">No se encontraron beneficiarios con ese documento o nombre.</p>
       ) : (
         <>
           {/* Mobile: tarjetas apiladas — una tabla de 7 columnas no cabe

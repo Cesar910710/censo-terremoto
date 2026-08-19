@@ -52,6 +52,20 @@ model Material {
   @@unique([name, unit])
 }
 
+// Listas parametrizables para el formulario de "nuevo material" — igual que
+// Municipio, son tablas de referencia sin FK hacia Material.category/unit
+// (que siguen siendo texto libre): existen solo para poblar el picklist y
+// permitir agregar opciones nuevas desde la UI sin tocar código.
+model MaterialCategory {
+  id   String @id @default(uuid())
+  name String @unique
+}
+
+model MaterialUnit {
+  id   String @id @default(uuid())
+  name String @unique
+}
+
 // Ledger de movimientos: el stock actual = suma de ENTRADA - suma de SALIDA.
 // Esto hace que sincronizar offline sea seguro: cada registro es un insert
 // independiente, nunca un update sobre una cantidad compartida.

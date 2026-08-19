@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { CATEGORIAS, TODOS_LOS_MATERIALES } from "../src/lib/materiales.constants";
+import { CATEGORIAS, UNIDADES, TODOS_LOS_MATERIALES } from "../src/lib/materiales.constants";
 import { MUNICIPIOS_VALLE_DEL_CAUCA } from "../src/lib/municipios.constants";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -35,7 +35,29 @@ async function seedMunicipios() {
   console.log(`Seed listo: ${MUNICIPIOS_VALLE_DEL_CAUCA.length} municipios.`);
 }
 
+// Semilla los picklists parametrizables de categoría/unidad con los mismos
+// valores que ya usa el catálogo de materiales, para que coincidan con lo
+// que Material.category/unit ya tienen guardado.
+async function seedCategoriasYUnidades() {
+  for (const cat of CATEGORIAS) {
+    await prisma.materialCategory.upsert({
+      where: { name: cat.nombre },
+      update: {},
+      create: { name: cat.nombre },
+    });
+  }
+  for (const u of UNIDADES) {
+    await prisma.materialUnit.upsert({
+      where: { name: u.codigo },
+      update: {},
+      create: { name: u.codigo },
+    });
+  }
+  console.log(`Seed listo: ${CATEGORIAS.length} categorías, ${UNIDADES.length} unidades.`);
+}
+
 async function main() {
+  await seedCategoriasYUnidades();
   await seedMateriales();
   await seedMunicipios();
 }

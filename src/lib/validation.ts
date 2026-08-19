@@ -20,6 +20,14 @@ export const movementSchema = z.object({
   deliveryId: z.string().uuid().optional(),
 });
 
+export const materialCategorySchema = z.object({
+  name: z.string().min(1, "Nombre requerido"),
+});
+
+export const materialUnitSchema = z.object({
+  name: z.string().min(1, "Nombre requerido"),
+});
+
 export const familySchema = z.object({
   id: z.string().uuid().optional(),
   headOfHouseholdName: z.string().min(1, "Nombre requerido"),

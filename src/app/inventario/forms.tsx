@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type OutboxItem } from "@/lib/offline-db";
 import { submitOrQueue } from "@/lib/sync";
-import { CATEGORIAS } from "@/lib/materiales.constants";
+import { CreatableSelect } from "./creatable-select";
 
 type Material = {
   id: string;
@@ -177,7 +177,15 @@ function FamilySearchInput() {
 // Entrada ya recibe la lista completa sin filtrar por stock). Si lo que se
 // busca no existe, permite crearlo ahí mismo sin salir del formulario de
 // movimiento; al crearlo queda seleccionado de inmediato.
-function MaterialSearchInput({ materials }: { materials: Material[] }) {
+function MaterialSearchInput({
+  materials,
+  categories,
+  units,
+}: {
+  materials: Material[];
+  categories: string[];
+  units: string[];
+}) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Material | null>(null);
   const [open, setOpen] = useState(false);
@@ -308,25 +316,22 @@ function MaterialSearchInput({ materials }: { materials: Material[] }) {
                 onChange={(e) => setQuery(e.target.value)}
                 className={inputClass}
               />
-              <input
-                type="text"
-                placeholder="Unidad (bulto, saco, m2...)"
+              <CreatableSelect
                 value={createUnit}
-                onChange={(e) => setCreateUnit(e.target.value)}
-                className={inputClass}
+                onValueChange={setCreateUnit}
+                options={units}
+                placeholder="Selecciona una unidad"
+                addEndpoint="/api/material-units"
+                addLabel="Nueva unidad"
               />
-              <select
+              <CreatableSelect
                 value={createCategory}
-                onChange={(e) => setCreateCategory(e.target.value)}
-                className={inputClass}
-              >
-                <option value="">Categoría (opcional)</option>
-                {CATEGORIAS.map((cat) => (
-                  <option key={cat.codigo} value={cat.nombre}>
-                    {cat.nombre}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setCreateCategory}
+                options={categories}
+                placeholder="Categoría (opcional)"
+                addEndpoint="/api/material-categories"
+                addLabel="Nueva categoría"
+              />
               {createError && <p className="text-xs text-red-600">{createError}</p>}
               <div className="flex gap-2">
                 <button
@@ -353,7 +358,15 @@ function MaterialSearchInput({ materials }: { materials: Material[] }) {
   );
 }
 
-export function MovementForm({ materials }: { materials: MaterialWithStock[] }) {
+export function MovementForm({
+  materials,
+  categories,
+  units,
+}: {
+  materials: MaterialWithStock[];
+  categories: string[];
+  units: string[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<"ENTRADA" | "SALIDA">("ENTRADA");
@@ -585,7 +598,12 @@ export function MovementForm({ materials }: { materials: MaterialWithStock[] }) 
 
       {type === "ENTRADA" ? (
         <>
-          <MaterialSearchInput key={resetKey} materials={availableMaterials} />
+          <MaterialSearchInput
+            key={resetKey}
+            materials={availableMaterials}
+            categories={categories}
+            units={units}
+          />
 
           <input
             type="number"
@@ -691,11 +709,17 @@ export function MovementForm({ materials }: { materials: MaterialWithStock[] }) 
   );
 }
 
-export function NewMaterialForm() {
+export function NewMaterialForm({ categories, units }: { categories: string[]; units: string[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [lastQueued, setLastQueued] = useState(false);
+  // Fuerza el remontaje de los CreatableSelect tras guardar — son
+  // controlados internamente (mantienen su propio estado aunque el <form>
+  // circundante haga form.reset()), así que sin esto el picklist seguiría
+  // mostrando la última unidad/categoría elegida la próxima vez que se abra
+  // el modal.
+  const [resetKey, setResetKey] = useState(0);
   const formDialogRef = useRef<HTMLDialogElement>(null);
   const confirmDialogRef = useRef<HTMLDialogElement>(null);
 
@@ -719,6 +743,7 @@ export function NewMaterialForm() {
         return;
       }
       form.reset();
+      setResetKey((k) => k + 1);
       setLastQueued(result.queued);
       formDialogRef.current?.close();
       if (!result.queued) router.refresh();
@@ -746,21 +771,23 @@ export function NewMaterialForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-5">
         <p className="text-base font-medium">Nuevo material</p>
         <input type="text" name="name" placeholder="Nombre" required className={inputClass} />
-        <input
-          type="text"
+        <CreatableSelect
+          key={`unit-${resetKey}`}
           name="unit"
-          placeholder="Unidad (bulto, saco, m2...)"
+          options={units}
+          placeholder="Selecciona una unidad"
+          addEndpoint="/api/material-units"
+          addLabel="Nueva unidad"
           required
-          className={inputClass}
         />
-        <select name="category" className={inputClass} defaultValue="">
-          <option value="">Categoría (opcional)</option>
-          {CATEGORIAS.map((cat) => (
-            <option key={cat.codigo} value={cat.nombre}>
-              {cat.nombre}
-            </option>
-          ))}
-        </select>
+        <CreatableSelect
+          key={`category-${resetKey}`}
+          name="category"
+          options={categories}
+          placeholder="Categoría (opcional)"
+          addEndpoint="/api/material-categories"
+          addLabel="Nueva categoría"
+        />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

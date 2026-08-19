@@ -22,7 +22,7 @@ type SalidaRow = {
   materials: { name: string; unit: string; quantity: number }[];
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 const loadMoreClass =
   "self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]";
 const inputClass =
@@ -42,11 +42,15 @@ export function HistorialTabs({
 
   // El buscador solo tiene sentido en Salidas: es el único lado con un
   // documento de beneficiario asociado (las entradas registran donante, no
-  // un censado con documento).
+  // un censado con documento). Busca por documento o por nombre del
+  // destinatario.
   const filteredSalida = useMemo(() => {
     const q = search.trim();
     if (!q) return salidaRows;
-    return salidaRows.filter((r) => r.documento.includes(q));
+    const qLower = q.toLowerCase();
+    return salidaRows.filter(
+      (r) => r.documento.includes(q) || r.recipient.toLowerCase().includes(qLower)
+    );
   }, [search, salidaRows]);
 
   const visibleEntradaRows = entradaRows.slice(0, visibleEntrada);
@@ -82,7 +86,7 @@ export function HistorialTabs({
       {tab === "SALIDA" && (
         <input
           type="text"
-          placeholder="Buscar por documento..."
+          placeholder="Buscar por documento o nombre..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -167,7 +171,7 @@ export function HistorialTabs({
         )
       ) : filteredSalida.length === 0 ? (
         <p className="text-sm text-zinc-500">
-          {search ? "No se encontraron salidas con ese documento." : "Aún no hay salidas registradas."}
+          {search ? "No se encontraron salidas con ese documento o nombre." : "Aún no hay salidas registradas."}
         </p>
       ) : (
         <>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getStock } from "@/lib/inventory";
+import { prisma } from "@/lib/prisma";
 import { MovementForm, NewMaterialForm } from "../forms";
 import { SyncStatus, PendingQueue } from "@/app/offline-ui";
 
@@ -12,7 +13,11 @@ export default async function MovimientosPage() {
   // getStock() (no prisma.material.findMany directo) porque el formulario de
   // Salida necesita saber cuánto hay disponible de cada material para
   // filtrar y mostrar la cantidad.
-  const stock = await getStock();
+  const [stock, categoryRows, unitRows] = await Promise.all([
+    getStock(),
+    prisma.materialCategory.findMany({ orderBy: { name: "asc" } }),
+    prisma.materialUnit.findMany({ orderBy: { name: "asc" } }),
+  ]);
   const materials = stock.map((s) => ({
     id: s.materialId,
     name: s.name,
@@ -20,6 +25,8 @@ export default async function MovimientosPage() {
     category: s.category,
     disponible: s.disponible,
   }));
+  const categories = categoryRows.map((c) => c.name);
+  const units = unitRows.map((u) => u.name);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
@@ -33,12 +40,12 @@ export default async function MovimientosPage() {
       <SyncStatus />
 
       <section className="flex flex-col gap-3">
-        <MovementForm materials={materials} />
+        <MovementForm materials={materials} categories={categories} units={units} />
         <div className="flex flex-col gap-1 border-t border-black/[.08] pt-3 dark:border-white/[.145]">
           <span className="text-xs text-zinc-500">
             ¿El material que buscas no está en la lista?
           </span>
-          <NewMaterialForm />
+          <NewMaterialForm categories={categories} units={units} />
         </div>
       </section>
 

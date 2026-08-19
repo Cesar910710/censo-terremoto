@@ -80,15 +80,6 @@ export function FamilyForm({
     e.preventDefault();
     setError(null);
 
-    // El checklist de materiales no soporta el atributo required nativo de
-    // HTML (es un grupo de checkboxes), así que en /registro (autorregistro)
-    // se valida a mano — ahí sí importa saber qué necesita la familia. En
-    // censo/registrar queda opcional, igual que el resto de campos.
-    if (selfRegistered && selectedIds.size === 0) {
-      setError("Selecciona al menos un material");
-      return;
-    }
-
     const form = e.currentTarget;
     const data = new FormData(form);
 
@@ -198,7 +189,6 @@ export function FamilyForm({
         type="text"
         name="address"
         placeholder="Dirección"
-        required={selfRegistered}
         defaultValue={editingFamily?.address ?? undefined}
         className={inputClass}
       />
@@ -206,7 +196,6 @@ export function FamilyForm({
       <div className="flex flex-col gap-3 sm:flex-row">
         <select
           name="municipality"
-          required={selfRegistered}
           className={inputClass}
           defaultValue={
             editingFamily?.municipality ?? (municipios.includes("Versalles") ? "Versalles" : municipios[0])
@@ -221,7 +210,6 @@ export function FamilyForm({
         <input
           type="text"
           name="department"
-          required={selfRegistered}
           defaultValue={editingFamily?.department ?? "Valle del Cauca"}
           className={inputClass}
         />
