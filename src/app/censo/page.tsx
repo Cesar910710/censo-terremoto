@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { FamiliesTable } from "./families-table";
 
@@ -16,7 +17,10 @@ export default async function CensoPage() {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">Censo</h1>
+        <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+          <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          Censo
+        </h1>
         <Link
           href="/censo/registrar"
           className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"

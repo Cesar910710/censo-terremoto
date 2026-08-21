@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Gift, Truck } from "lucide-react";
 import { getStock } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
 import { MovementForm, NewMaterialForm } from "../forms";
@@ -51,12 +52,22 @@ export default async function MovimientosPage() {
 
       <PendingQueue />
 
-      <Link
-        href="/inventario/movimientos/historial"
-        className="self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
-      >
-        Historial de movimientos
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/donaciones"
+          className="flex items-center gap-1.5 rounded-md border border-green-300 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+        >
+          <Gift className="h-4 w-4" />
+          Ver donaciones
+        </Link>
+        <Link
+          href="/entregas"
+          className="flex items-center gap-1.5 rounded-md border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
+        >
+          <Truck className="h-4 w-4" />
+          Ver entregas
+        </Link>
+      </div>
     </main>
   );
 }

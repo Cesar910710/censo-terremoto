@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Package } from "lucide-react";
 import { getStock } from "@/lib/inventory";
 import { prisma } from "@/lib/prisma";
 import { NewMaterialForm } from "./forms";
@@ -21,7 +22,10 @@ export default async function InventarioPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">Inventario</h1>
+        <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+          <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          Inventario
+        </h1>
         <div className="flex flex-wrap gap-2">
           <NewMaterialForm categories={categories} units={units} />
           <Link

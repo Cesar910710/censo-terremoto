@@ -16,7 +16,7 @@ export function DeliveryDetailButton({
       <button
         type="button"
         onClick={() => dialogRef.current?.showModal()}
-        className="self-start rounded-md border border-black/[.08] px-3 py-1.5 text-xs font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+        className="self-start rounded-md border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
       >
         Ver detalle ({materials.length})
       </button>

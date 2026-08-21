@@ -1,19 +1,16 @@
 import Link from "next/link";
+import { Truck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { HistorialTabs } from "./historial-tabs";
+import { EntregasTable } from "./entregas-table";
 
 // Igual que las demás páginas de inventario: consulta Prisma directo, así
 // que necesita quedar marcada como dinámica o Next la dejaría fija desde el
 // build.
 export const dynamic = "force-dynamic";
 
-export default async function HistorialMovimientosPage() {
-  // Tope generoso en vez de paginar en la base de datos: para el volumen
-  // real de un solo esfuerzo de respuesta local (decenas/cientos de
-  // movimientos, no miles), traer todo y paginar/filtrar en el cliente es
-  // más simple que paginación por cursor — sobre todo porque las entregas
-  // multi-material ya se agrupan en memoria (ver deliveryId abajo).
+export default async function EntregasPage() {
   const movements = await prisma.inventoryMovement.findMany({
+    where: { type: "SALIDA" },
     orderBy: { occurredAt: "desc" },
     take: 1000,
     include: {
@@ -22,17 +19,10 @@ export default async function HistorialMovimientosPage() {
     },
   });
 
-  const entradaRows: {
-    key: string;
-    occurredAt: Date;
-    materialName: string;
-    materialUnit: string;
-    quantity: number;
-    donorName: string;
-    note: string | null;
-  }[] = [];
-
-  const salidaRows: {
+  // Las entregas con varios materiales a la vez comparten deliveryId (ver
+  // MovementForm). Se agrupan aquí en una sola fila con un botón de detalle;
+  // las de un solo material (sin deliveryId) siguen siendo su propia fila.
+  const rows: {
     key: string;
     occurredAt: Date;
     recipient: string;
@@ -40,31 +30,14 @@ export default async function HistorialMovimientosPage() {
     note: string | null;
     materials: { name: string; unit: string; quantity: number }[];
   }[] = [];
-
-  // Las entregas con varios materiales a la vez comparten deliveryId (ver
-  // MovementForm). Se agrupan aquí en una sola fila con un botón de detalle;
-  // las de un solo material (sin deliveryId) siguen siendo su propia fila.
   const seenDeliveries = new Set<string>();
 
   for (const m of movements) {
-    if (m.type === "ENTRADA") {
-      entradaRows.push({
-        key: m.id,
-        occurredAt: m.occurredAt,
-        materialName: m.material.name,
-        materialUnit: m.material.unit,
-        quantity: m.quantity,
-        donorName: m.donorName ?? "—",
-        note: m.note,
-      });
-      continue;
-    }
-
     if (m.deliveryId) {
       if (seenDeliveries.has(m.deliveryId)) continue;
       seenDeliveries.add(m.deliveryId);
       const group = movements.filter((mv) => mv.deliveryId === m.deliveryId);
-      salidaRows.push({
+      rows.push({
         key: m.deliveryId,
         occurredAt: m.occurredAt,
         recipient: m.family?.headOfHouseholdName ?? m.recipientName ?? "—",
@@ -79,7 +52,7 @@ export default async function HistorialMovimientosPage() {
       continue;
     }
 
-    salidaRows.push({
+    rows.push({
       key: m.id,
       occurredAt: m.occurredAt,
       recipient: m.family?.headOfHouseholdName ?? m.recipientName ?? "—",
@@ -89,8 +62,7 @@ export default async function HistorialMovimientosPage() {
     });
   }
 
-  entradaRows.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
-  salidaRows.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+  rows.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
@@ -99,20 +71,23 @@ export default async function HistorialMovimientosPage() {
           <Link href="/inventario" className="text-sm text-zinc-500 hover:underline">
             ← Inventario
           </Link>
-          <h1 className="text-xl font-semibold tracking-tight">Historial de movimientos</h1>
+          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <Truck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            Entregas
+          </h1>
         </div>
         <Link
-          href="/inventario/movimientos"
-          className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
+          href="/entregas/registrar"
+          className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
         >
-          Registrar movimiento
+          Registrar entrega
         </Link>
       </div>
 
-      {entradaRows.length === 0 && salidaRows.length === 0 ? (
-        <p className="text-sm text-zinc-500">Aún no hay movimientos registrados.</p>
+      {rows.length === 0 ? (
+        <p className="text-sm text-zinc-500">Aún no hay entregas registradas.</p>
       ) : (
-        <HistorialTabs entradaRows={entradaRows} salidaRows={salidaRows} />
+        <EntregasTable rows={rows} />
       )}
     </main>
   );

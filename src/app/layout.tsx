@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Censo Terremoto",
+  title: "Censo y Donaciones",
   description: "Censo de familias e inventario de donaciones post-terremoto",
 };
 

@@ -362,14 +362,20 @@ export function MovementForm({
   materials,
   categories,
   units,
+  lockedType,
 }: {
   materials: MaterialWithStock[];
   categories: string[];
   units: string[];
+  // Cuando viene fijo (páginas dedicadas /donaciones/registrar y
+  // /entregas/registrar), se oculta el selector Entrada/Salida y el
+  // formulario queda fijo en ese tipo — a diferencia de
+  // /inventario/movimientos, que sigue mostrando ambos.
+  lockedType?: "ENTRADA" | "SALIDA";
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [type, setType] = useState<"ENTRADA" | "SALIDA">("ENTRADA");
+  const [type, setType] = useState<"ENTRADA" | "SALIDA">(lockedType ?? "ENTRADA");
   const [error, setError] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [confirmTitle, setConfirmTitle] = useState("");
@@ -575,26 +581,28 @@ export function MovementForm({
   return (
     <>
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <div className="flex gap-4 text-sm">
-        <label className="flex items-center gap-1.5">
-          <input
-            type="radio"
-            name="movementType"
-            checked={type === "ENTRADA"}
-            onChange={() => setType("ENTRADA")}
-          />
-          Entrada (donación)
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input
-            type="radio"
-            name="movementType"
-            checked={type === "SALIDA"}
-            onChange={() => setType("SALIDA")}
-          />
-          Salida (entrega)
-        </label>
-      </div>
+      {!lockedType && (
+        <div className="flex gap-4 text-sm">
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name="movementType"
+              checked={type === "ENTRADA"}
+              onChange={() => setType("ENTRADA")}
+            />
+            Entrada (donación)
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name="movementType"
+              checked={type === "SALIDA"}
+              onChange={() => setType("SALIDA")}
+            />
+            Salida (entrega)
+          </label>
+        </div>
+      )}
 
       {type === "ENTRADA" ? (
         <>
@@ -700,7 +708,13 @@ export function MovementForm({
         disabled={isPending}
         className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
       >
-        {isPending ? "Guardando..." : "Registrar movimiento"}
+        {isPending
+          ? "Guardando..."
+          : lockedType === "ENTRADA"
+            ? "Registrar donación"
+            : lockedType === "SALIDA"
+              ? "Registrar entrega"
+              : "Registrar movimiento"}
       </button>
     </form>
 
