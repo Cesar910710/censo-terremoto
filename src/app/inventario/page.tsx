@@ -27,12 +27,12 @@ export default async function InventarioPage() {
           Inventario
         </h1>
         <div className="flex flex-wrap gap-2">
-          <NewMaterialForm categories={categories} units={units} />
+          <NewMaterialForm categories={categories} units={units} emphasize />
           <Link
-            href="/inventario/movimientos"
+            href="/donaciones/registrar"
             className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
           >
-            Registrar movimiento
+            Registrar donación
           </Link>
         </div>
       </div>

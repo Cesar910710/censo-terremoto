@@ -723,7 +723,18 @@ export function MovementForm({
   );
 }
 
-export function NewMaterialForm({ categories, units }: { categories: string[]; units: string[] }) {
+export function NewMaterialForm({
+  categories,
+  units,
+  emphasize,
+}: {
+  categories: string[];
+  units: string[];
+  // El botón se resalta solo en /inventario, donde es la acción principal de
+  // la página; en /inventario/movimientos y /donaciones/registrar sigue
+  // discreto porque ahí es secundario frente al formulario de movimiento.
+  emphasize?: boolean;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -770,7 +781,11 @@ export function NewMaterialForm({ categories, units }: { categories: string[]; u
     <button
       type="button"
       onClick={() => formDialogRef.current?.showModal()}
-      className="self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+      className={
+        emphasize
+          ? "self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          : "self-start rounded-md border border-black/[.08] px-4 py-2 text-sm font-medium hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-white/[.06]"
+      }
     >
       + Nuevo material
     </button>
